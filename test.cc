@@ -47,6 +47,24 @@ int dijkstra(int s, int t, Graph &g, vector<int> &d) {
   return numeric_limits<int>::max();
 }
 
+vector<int> multCol(vector<vector<int>> &m, vector<int> &col) {
+  vector<int> result(col.size());
+  for (int i = 0; i < m.size(); i++) {
+    for (int j = 0; j < m[i].size(); j++) {
+      result[i] += m[i][j] * col[j];
+    }
+  }
+  return result;
+}
+
+vector<int> getCol(vector<vector<int>> &m, int numCol) {
+  vector<int> col;
+  for (int i = 0; i < m.size(); i++) {
+    col.push_back(m[i][numCol]);
+  }
+  return col;
+}
+
 int main(int argc, char const *argv[]) {
   vector<vector<int>> m = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
   Matrix<int> mat(m);
