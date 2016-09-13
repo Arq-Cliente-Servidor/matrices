@@ -10,7 +10,7 @@ using Vector = vector<int>;
 
 void print(Matrix &r) {
   for (size_t i = 0; i < r.size(); i++) {
-    for (size_t j = 0; j < r.size(); j++) {
+    for (size_t j = 0; j < r[i].size(); j++) {
       cout << r[j][i] << " ";
     }
     cout << endl;
@@ -28,7 +28,7 @@ void mult(const Matrix &m, int col, Vector &r) {
 }
 
 int main() {
-  Matrix m = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+  Matrix m = {{2, 0, 1}, {3, 0, 0}, {5, 1, 1}};
   Vector v = {5, 7, 9};
   Matrix r = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
   thread t0 = thread(mult, cref(m), 0, ref(r[0]));
