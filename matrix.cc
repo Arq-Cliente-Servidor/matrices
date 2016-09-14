@@ -1,13 +1,12 @@
 #include <iostream>
-#include <thread>
 #include <queue>
+#include <thread>
 #include <vector>
 
 using namespace std;
 
 using Matrix = vector<vector<int>>;
 using Vector = vector<int>;
-
 
 Vector getCol(const Matrix &m, int numCol) {
   Vector col(m.size());
@@ -17,9 +16,10 @@ Vector getCol(const Matrix &m, int numCol) {
   return col;
 }
 
-void diamondCol(const Matrix &m1, const Matrix &m2, int nCol,
-                Matrix &result, int index, vector<bool> &available) {
-
+void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
+                int index, vector<bool> &available, int &cont) {
+  if (cont == m1[0].size())
+    cont = 0;
   available[index] = true;
   vector<int> col = getCol(m2, nCol);
   for (int i = 0; i < m1.size(); i++) {
@@ -31,6 +31,7 @@ void diamondCol(const Matrix &m1, const Matrix &m2, int nCol,
   }
 
   available[index] = false;
+  cont++;
 }
 
 void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
@@ -54,95 +55,95 @@ void multConcurrency(const Matrix &m1, const Matrix &m2) {
 
   queue<int> q;
   Matrix result(m1.size(), Vector(m2[0].size(), 0));
-  vector<bool> available(4, false);
-  vector<thread*> th(4, nullptr);
-  for (int i = 0; i < m1.size(); i++) q.push(i);
-
+  int n = thread::hardware_concurrency();
+  cout << "nucleos: " << n << endl;
+  vector<bool> available(n, false);
+  vector<thread *> th(n, nullptr);
+  for (int i = 0; i < m1[0].size(); i++)
+    q.push(i);
   while (!q.empty()) {
-    if (!available[0] and !q.empty()) {
-      int nCol = q.front(); q.pop();
-      th[0] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), 0, ref(available));
-    }
-    if (!available[1] and !q.empty()) {
-      int nCol = q.front(); q.pop();
-      th[1] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), 1, ref(available));
-    }
-    if (!available[2] and !q.empty()) {
-      int nCol = q.front(); q.pop();
-      th[2] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), 2, ref(available));
-    }
-    if (!available[3] and !q.empty()) {
-      int nCol = q.front(); q.pop();
-      th[3] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), 3, ref(available));
+    for (int i = 0; i < available.size(); i++) {
+      if (!available[i] and !q.empty()) {
+        int nCol = q.front();
+        q.pop();
+        th[i] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), i,
+                           ref(available));
+      }
     }
   }
 
   for (int i = 0; i < th.size(); i++) {
-    if (th[i] != nullptr) th[i]->join();
+    if (th[i] != nullptr)
+      th[i]->join();
   }
 
   cout << "Matrix:" << endl;
   for (int i = 0; i < result.size(); i++) {
     for (int j = 0; j < result[i].size(); j++) {
-      if (j) cout << " ";
+      if (j)
+        cout << " ";
       cout << result[i][j];
     }
     cout << endl;
   }
 }
 
-void diamondConcurrency(const Matrix &m1, const Matrix &m2) {
+void diamondConcurrency(const Matrix &m1, Matrix &m2) {
   queue<int> q;
   Matrix result(m1.size(), Vector(m1[0].size(), 0));
-  vector<bool> available(4, false);
-  vector<thread*> th(4, nullptr);
-  for (int i = 0; i < m1.size(); i++) q.push(i);
+  int n = thread::hardware_concurrency();
+  vector<bool> available(n, false);
+  vector<thread *> th(n, nullptr);
+  for (int i = 0; i < m1[0].size(); i++)
+    q.push(i);
+  int cont = 0;
+  for (int j = 0; j < m1.size() - 1; j++) {
+    result.assign(m1.size(), Vector(m1[0].size(), 0));
 
-  for (int i = 0; i < 1; i++) {
     while (!q.empty()) {
-      if (!available[0] and !q.empty()) {
-        int nCol = q.front(); q.pop();
-        th[0] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), 0, ref(available));
-      }
-      if (!available[1] and !q.empty()) {
-        int nCol = q.front(); q.pop();
-        th[1] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), 1, ref(available));
-      }
-      if (!available[2] and !q.empty()) {
-        int nCol = q.front(); q.pop();
-        th[2] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), 2, ref(available));
-      }
-      if (!available[3] and !q.empty()) {
-        int nCol = q.front(); q.pop();
-        th[3] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), 3, ref(available));
+      for (int i = 0; i < available.size(); i++) {
+        if (!available[i] and !q.empty()) {
+          int nCol = q.front();
+          q.pop();
+          th[i] = new thread(diamondCol, cref(m1), ref(m2), nCol, ref(result),
+                             i, ref(available), ref(cont));
+        }
       }
     }
-  }
+    // cont = 0;
+    for (int i = 0; i < th.size(); i++) {
+      if (th[i]->joinable()) {
+        th[i]->join();
+        // delete th[i];
+      }
+    }
 
-  for (int i = 0; i < th.size(); i++) {
-    if (th[i] != nullptr) th[i]->join();
+    m2 = result;
+    for (int i = 0; i < m1[0].size(); i++)
+      q.push(i);
   }
 
   cout << "Matrix:" << endl;
   for (int i = 0; i < result.size(); i++) {
     for (int j = 0; j < result[i].size(); j++) {
-      if (j) cout << " ";
+      if (j)
+        cout << " ";
       cout << result[i][j];
     }
     cout << endl;
   }
-  cout << endl;
 }
 
 int main(int argc, char const *argv[]) {
   Matrix m1 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  Matrix m2 = {{2, 0, 1 ,4}, {3, 0, 0, 0}, {5, 1, 1, 1}, {4, 5, 6, 6}};
+  Matrix m2 = {{2, 0, 1, 4}, {3, 0, 0, 0}, {5, 1, 1, 1}, {4, 5, 6, 6}};
   Matrix m3 = {{2, 3, 4}, {5, 6, 7}, {8, 9, 10}};
 
   // multConcurrency(m1, m1);
   // multConcurrency(m2, m2);
-  diamondConcurrency(m1, m1);
-  diamondConcurrency(m1, m3);
+  Matrix mc = m1;
+  diamondConcurrency(m1, mc);
+  // diamondConcurrency(m1, m3);
 
   // m1 X m2 = [[3 1 2]]
   //            [3 0 3]
@@ -169,7 +170,8 @@ int main(int argc, char const *argv[]) {
   //
   // cout << "Mult Matrix: " << endl;
   // for (int i = 0; i < result.size(); i++) {
-  //   cout << result[i][0] << " " << result[i][1] << " " << result[i][2] << endl;
+  //   cout << result[i][0] << " " << result[i][1] << " " << result[i][2] <<
+  //   endl;
   // }
   // cout << endl;
 
