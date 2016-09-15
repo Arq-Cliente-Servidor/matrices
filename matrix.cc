@@ -18,8 +18,7 @@ Vector getCol(const Matrix &m, int numCol) {
 
 void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
                 int index, vector<bool> &available, int &cont) {
-  if (cont == m1[0].size())
-    cont = 0;
+
   available[index] = true;
   vector<int> col = getCol(m2, nCol);
   for (int i = 0; i < m1.size(); i++) {
@@ -30,8 +29,8 @@ void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
     result[i][nCol] = mn;
   }
 
-  available[index] = false;
   cont++;
+  available[index] = false;
 }
 
 void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
@@ -90,44 +89,45 @@ void multConcurrency(const Matrix &m1, const Matrix &m2) {
 
 void diamondConcurrency(const Matrix &m1, Matrix &m2) {
   queue<int> q;
-  Matrix result(m1.size(), Vector(m1[0].size(), 0));
+  Matrix result;
+
+  int cont = 0;
   int n = thread::hardware_concurrency();
+
   vector<bool> available(n, false);
   vector<thread *> th(n, nullptr);
-  for (int i = 0; i < m1[0].size(); i++)
-    q.push(i);
-  int cont = 0;
-  for (int j = 0; j < m1.size() - 1; j++) {
-    result.assign(m1.size(), Vector(m1[0].size(), 0));
+  for (int i = 0; i < m1[0].size(); i++) q.push(i);
 
-    while (!q.empty()) {
+  for (int t = 0; t < m1.size() - 1; t++) {
+    result.assign(m1.size(), Vector(m1[0].size(), 0));
+    while (true) {
       for (int i = 0; i < available.size(); i++) {
         if (!available[i] and !q.empty()) {
-          int nCol = q.front();
-          q.pop();
-          th[i] = new thread(diamondCol, cref(m1), ref(m2), nCol, ref(result),
-                             i, ref(available), ref(cont));
+          int nCol = q.front(); q.pop();
+          th[i] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), i, ref(available), ref(cont));
         }
       }
-    }
-    // cont = 0;
-    for (int i = 0; i < th.size(); i++) {
-      if (th[i]->joinable()) {
-        th[i]->join();
-        // delete th[i];
+      if (cont == m1.size()) {
+        cont = 0;
+        break;
       }
+    }
+
+    for (int i = 0; i < th.size(); i++) {
+      if (th[i] != nullptr) {
+        th[i]->join();
+      }
+      delete th[i];
     }
 
     m2 = result;
-    for (int i = 0; i < m1[0].size(); i++)
-      q.push(i);
+    for (int i = 0; i < m1[0].size(); i++) q.push(i);
   }
 
   cout << "Matrix:" << endl;
   for (int i = 0; i < result.size(); i++) {
     for (int j = 0; j < result[i].size(); j++) {
-      if (j)
-        cout << " ";
+      if (j) cout << " ";
       cout << result[i][j];
     }
     cout << endl;
