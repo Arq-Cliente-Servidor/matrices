@@ -1,3 +1,5 @@
+#include <chrono>
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <thread>
@@ -32,7 +34,7 @@ void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
   available[index] = true;
   vector<int> col = getCol(m2, nCol);
   for (int i = 0; i < m1.size(); i++) {
-    for (int j = 0; j < m1[i].size(); j++) {
+    for (int j = 0; j < col.size(); j++) {
       result[i][nCol] += m1[i][j] * col[j];
     }
   }
@@ -69,8 +71,8 @@ void multConcurrency(const Matrix &m1, const Matrix &m2) {
     delete th[i];
   }
 
-  cout << "Matrix:" << endl;
-  print(result);
+  // cout << "Matrix:" << endl;
+  // print(result);
 }
 
 void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
@@ -91,8 +93,9 @@ void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
   available[index] = false;
 }
 
-void diamondConcurrency(const Matrix &m1, Matrix &m2) {
+void diamondConcurrency(const Matrix &m1) {
   queue<int> q;
+  Matrix m2 = m1;
   Matrix result;
 
   int cont = 0;
@@ -132,25 +135,80 @@ void diamondConcurrency(const Matrix &m1, Matrix &m2) {
   print(result);
 }
 
+// Sequential
+
+void multSequential(const Matrix &m1, const Matrix &m2) {
+  if (m1[0].size() != m2.size()) {
+    cerr << "It is not possible matrix multiplication!" << endl;
+    return;
+  }
+
+  Matrix result(m1.size(), Vector(m2[0].size()));
+  for (int i = 0; i < m1.size(); i++) {
+    for (int j = 0; j < m2[0].size(); j++) {
+      for (int k = 0; k < m1[i].size(); k++) {
+        result[i][j] += m1[i][k] * m2[k][j];
+      }
+    }
+  }
+
+  // cout << "Matrix" << endl;
+  // print(result);
+}
+
+void diamondSequential(const Matrix &m1) {
+  Matrix m2 = m1;
+  int oo = numeric_limits<int>::max();
+  Matrix result;
+
+  for (int nodes = 0; nodes < m1.size() - 1; nodes++) {
+    result.assign(m1.size(), Vector(m1.size(), oo));
+    for (int i = 0; i < m1.size(); i++) {
+      for (int j = 0; j < m2[0].size(); j++) {
+        for (int k = 0; k < m1[i].size(); k++) {
+          result[i][j] = min(result[i][j], m1[i][k] + m2[k][j]);
+        }
+      }
+    }
+    m2 = result;
+  }
+
+  // cout << "Matrix" << endl;
+  // print(result);
+}
+
 int main(int argc, char const *argv[]) {
-  Matrix m1 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  Matrix m2 = {{2, 0, 1}, {3, 0, 0}, {5, 1, 1}};
-  Matrix m3 = {{1, 0, 1}, {1, 2, 1}, {1, 1, 0}};
+  ifstream dataset;
+  int rows, cols;
 
-  multConcurrency(m2, m3);
-  // multConcurrency(m2, m2);
-  Matrix mc = m1;
-  diamondConcurrency(m1, mc);
-  // diamondConcurrency(m1, m3);
+  dataset.open("files/test10.txt", ios::in);
+  dataset >> rows >> cols;
+  Matrix m(rows, Vector(cols));
 
-  // m2 X m3 = [[3 1 2]]
-  //            [3 0 3]
-  //            [7 3 6]
-  //
-  // m1 <> m1 (n -1 veces) =
-  //            [[3 4 5]]
-  //             [6 7 8]
-  //             [9 10 11]
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++)
+      dataset >> m[i][j];
+  }
+
+  {
+    auto start = chrono::high_resolution_clock::now();
+    // multSequential(m, m);
+    diamondSequential(m);
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    cout << "Time Sequential: " << duration << "ms" << endl;
+  }
+
+  {
+    auto start = chrono::high_resolution_clock::now();
+    // multConcurrency(m, m);
+    diamondConcurrency(m);
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    cout << "Time Concurrency: " << duration << "ms" << endl;
+  }
+  // diamondConcurrency(m);
+
 
   return 0;
 }

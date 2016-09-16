@@ -66,6 +66,25 @@ vector<int> getCol(vector<vector<int>> &m, int numCol) {
 }
 
 int main(int argc, char const *argv[]) {
+  // Matrix m1 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+  // Matrix m2 = {{2, 0, 1}, {3, 0, 0}, {5, 1, 1}};
+  // Matrix m3 = {{1, 0, 1}, {1, 2, 1}, {1, 1, 0}};
+
+  // multConcurrency(m2, m3);
+  // multConcurrency(m2, m2);
+  // Matrix mc = m1;
+  // diamondConcurrency(m1, mc);
+  // diamondConcurrency(m1, m3);
+
+  // m2 X m3 = [[3 1 2]]
+  //            [3 0 3]
+  //            [7 3 6]
+  //
+  // m1 <> m1 (n -1 veces) =
+  //            [[3 4 5]]
+  //             [6 7 8]
+  //             [9 10 11]
+
   vector<vector<int>> m = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
   Matrix<int> mat(m);
   cout << mat << endl;
