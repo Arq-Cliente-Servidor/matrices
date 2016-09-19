@@ -76,7 +76,7 @@ class thread_pool {
   std::atomic_bool done;
   threadsafe_queue<std::function<void()>> work_queue;
   std::vector<std::thread> threads;
-  join_threads joiner;
+  join_threads *joiner;
   void worker_thread() {
     while (!done && !work_queue.empty()) {
       std::function<void()> task;
@@ -89,7 +89,8 @@ class thread_pool {
   }
 
 public:
-  thread_pool() : done(false), joiner(threads) {
+  thread_pool() : done(false) {
+    joiner = new join_threads(threads);
     unsigned const thread_count = std::thread::hardware_concurrency();
     try {
       for (unsigned i = 0; i < thread_count; ++i) {
@@ -101,7 +102,7 @@ public:
     }
   }
   ~thread_pool() {
-    joiner.~join_threads();
+    joiner->~join_threads();
     done = true;
     // std::string s("Destructing pool ");
     // s += std::to_string(work_queue.empty());
