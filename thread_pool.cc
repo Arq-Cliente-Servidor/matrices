@@ -131,14 +131,6 @@ void print(const Matrix &m) {
   std::cerr << "------------------------\n";
 }
 
-Vector getCol(const Matrix &m, int numCol) {
-  Vector col(m.size());
-  for (int i = 0; i < m.size(); i++) {
-    col[i] = m[i][numCol];
-  }
-  return col;
-}
-
 void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result) {
   // std::cerr << "start " << nCol << std::endl;
   // std::vector<int> col = getCol(m2, nCol);
@@ -157,7 +149,7 @@ int main() {
   std::ifstream dataset;
   int rows, cols;
 
-  dataset.open("files/test1.txt", std::ios::in);
+  dataset.open("files/test100.txt", std::ios::in);
   dataset >> rows >> cols;
   Matrix m(rows, Vector(cols));
   Matrix result(m.size(), Vector(m[0].size(), 0));
@@ -166,21 +158,22 @@ int main() {
     for (int j = 0; j < cols; j++)
       dataset >> m[i][j];
   }
-  //  Matrix m0(m);
+
+  Matrix m1(m);
 
   // print(m);
-  // for (int j = 0; j < 40; j++) {
-  //   result = Matrix(m.size(), Vector(m[0].size(), 0));
-  //
-  {
-    thread_pool pool;
-    for (int i = 0; i < 3; i++) {
-      auto w = [&m, &result, i]() { diamondCol(m, m, i, result); };
-      pool.submit(w);
+  for (int j = 0; j < cols - 1; j++) {
+    // result = Matrix(m.size(), Vector(m[0].size(), 0));
+
+    {
+      thread_pool pool;
+      for (int i = 0; i < cols; i++) {
+        auto w = [&m, &m1, &result, i]() { diamondCol(m, m1, i, result); };
+        pool.submit(w);
+      }
     }
+    m1 = result;
   }
-  //   m = result;
-  // }
   print(result);
 
   return 0;
