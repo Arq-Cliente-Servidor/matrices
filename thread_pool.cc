@@ -184,6 +184,72 @@ Matrix partition(const Matrix &m, int offsetI, int offsetJ) {
   return p;
 }
 
+void rebuild(Matrix &result, int offsetI, int offsetJ, const Matrix &m) {
+  for (int i = 0; i < m.size(); i++) {
+    for (int j = 0; j < m[i].size(); j++) {
+      result[i + offsetI][j + offsetJ] = m[i][j];
+    }
+  }
+}
+
+Matrix addMatrix(const Matrix &a, const Matrix &b) {
+  Matrix c(a.size(), Vector(a.size(), 0));
+  for (int i = 0; i < a.size(); i++) {
+    for (int j = 0; j < a[i].size(); j++) {
+      c[i][j] = a[i][j] + b[i][j];
+    }
+  }
+
+  return c;
+}
+
+Matrix multMatrix(const Matrix &m1, const Matrix &m2) {
+  Matrix result(m1.size(), Vector(m1.size(), 0));
+  for (int i = 0; i < m1.size(); i++) {
+    for (int j = 0; j < m1.size(); j++) {
+      for (int k = 0; k < m1.size(); k++) {
+        result[i][j] += m1[i][k] * m2[k][j];
+      }
+    }
+  }
+
+  return result;
+}
+
+Matrix block_seq(const Matrix &A, const Matrix &B) {
+  if (A.size() == 2) {
+    return multMatrix(A, B);
+  } else {
+    int sizeA = A.size() / 2;
+    int sizeB = B.size() / 2;
+
+    Matrix a0 = partition(A, 0, 0);
+    Matrix a1 = partition(A, 0, sizeA);
+    Matrix a2 = partition(A, sizeA, 0);
+    Matrix a3 = partition(A, sizeA, sizeA);
+
+    Matrix b0 = partition(B, 0, 0);
+    Matrix b1 = partition(B, 0, sizeB);
+    Matrix b2 = partition(B, sizeB, 0);
+    Matrix b3 = partition(B, sizeB, sizeB);
+
+    Matrix r0 = addMatrix(block_seq(a0, b0), block_seq(a1, b2));
+    Matrix r1 = addMatrix(block_seq(a0, b1), block_seq(a1, b3));
+    Matrix r2 = addMatrix(block_seq(a2, b0), block_seq(a3, b2));
+    Matrix r3 = addMatrix(block_seq(a2, b1), block_seq(a3, b3));
+
+    Matrix result(A.size(), Vector(A.size(), 0));
+    int sizeResult = result.size() / 2;
+
+    rebuild(result, 0, 0, r0);
+    rebuild(result, 0, sizeResult, r1);
+    rebuild(result, sizeResult, 0, r2);
+    rebuild(result, sizeResult, sizeResult, r3);
+
+    return result;
+  }
+}
+
 int main() {
   // std::ifstream dataset;
   // int rows, cols;
@@ -222,22 +288,33 @@ int main() {
   // print(result);
 
   Matrix A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  Matrix B = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  Matrix AA = {{1, 2}, {3, 4}};
+  Matrix BB = {{1, 2}, {3, 4}};
   // Matrix C(A.size(), Vector(A.size(), 0));
   // bijk(A, A, C);
-  int n = A.size() / 2;
-  Matrix p1 = partition(A, 0, 0);
-  Matrix p2 = partition(A, 0, n);
-  Matrix p3 = partition(A, n, 0);
-  Matrix p4 = partition(A, n, n);
+  // int n = A.size() / 2;
+  // Matrix p1 = partition(A, 0, 0);
+  // Matrix p2 = partition(A, 0, n);
+  // Matrix p3 = partition(A, n, 0);
+  // Matrix p4 = partition(A, n, n);
+  //
+  // rebuild(C, 0, 0, p1);
+  // rebuild(C, 0, n, p2);
+  // rebuild(C, n, 0, p3);
+  // rebuild(C, n, n, p4);
 
-  print(p1);
-  std::cout << std::endl;
-  print(p2);
-  std::cout << std::endl;
-  print(p3);
-  std::cout << std::endl;
-  print(p4);
-  std::cout << std::endl;
+  //
+  // print(p1);
+  // std::cout << std::endl;
+  // print(p2);
+  // std::cout << std::endl;
+  // print(p3);
+  // std::cout << std::endl;
+  // print(p4);
+  // std::cout << std::endl;
+  Matrix C = block_seq(A, B);
+  print(C);
 
   return 0;
 }
