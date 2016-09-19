@@ -83,11 +83,10 @@ void multConcurrency(const Matrix &m1, const Matrix &m2) {
 }
 
 void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
-                int index, vector<bool> &available, int &cont) {
+                int index, vector<bool> &available, int &cont, bool &value) {
 
   available[index] = true;
   vector<int> col = getCol(m2, nCol);
-
   for (int i = 0; i < m1.size(); i++) {
     int mn = numeric_limits<int>::max();
     for (int j = 0; j < m1[i].size(); j++) {
@@ -98,6 +97,10 @@ void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
 
   cont++;
   available[index] = false;
+  if (cont == m1.size()) {
+    cont = 0;
+    value = true;
+  }
 }
 
 void diamondConcurrency(const Matrix &m1) {
@@ -106,27 +109,29 @@ void diamondConcurrency(const Matrix &m1) {
   Matrix result;
 
   int cont = 0;
+  bool value = false;
   int n = thread::hardware_concurrency();
 
   vector<bool> available(n, false);
   vector<thread *> th(n);
+  int var = 0;
 
   for (int t = 0; t < m1.size() - 1; t++) {
     for (int i = 0; i < m1[0].size(); i++)
       q.push(i);
     result.assign(m1.size(), Vector(m1[0].size(), 0));
-
     while (true) {
       for (int i = 0; i < available.size(); i++) {
         if (!available[i] and !q.empty()) {
           int nCol = q.front();
           q.pop();
           th[i] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result),
-                             i, ref(available), ref(cont));
+                             i, ref(available), ref(cont), ref(value));
         }
       }
-      if (cont == m1.size()) {
-        cont = 0;
+      if (value) {
+        value = false;
+        cout << "entre " << var++ << endl;
         break;
       }
     }
@@ -190,7 +195,7 @@ int main(int argc, char const *argv[]) {
   ifstream dataset;
   int rows, cols;
 
-  dataset.open("files/test40.txt", ios::in);
+  dataset.open("files/test100.txt", ios::in);
   dataset >> rows >> cols;
   Matrix m(rows, Vector(cols));
 
