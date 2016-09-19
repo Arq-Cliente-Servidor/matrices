@@ -15,7 +15,7 @@ public:
   explicit join_threads(std::vector<std::thread> &threads_)
       : threads(threads_) {}
   ~join_threads() {
-    std::cerr << "destructing joiner\n";
+    // std::cerr << "destructing joiner\n";
     for (unsigned long i = 0; i < threads.size(); ++i) {
       if (threads[i].joinable())
         threads[i].join();
@@ -145,36 +145,99 @@ void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result) {
   // std::cerr << "dcol\n";
 }
 
-int main() {
-  std::ifstream dataset;
-  int rows, cols;
+void bijk(const Matrix &A, const Matrix &B, Matrix &C) {
+  int i, j, k, kk, jj;
+  double sum;
+  int n = A.size();
+  int en = n;
+  int bsize = n / 2;
+  // bsize * (n / bsize); /* Amount that fits evenly into blocks */
 
-  dataset.open("files/test100.txt", std::ios::in);
-  dataset >> rows >> cols;
-  Matrix m(rows, Vector(cols));
-  Matrix result(m.size(), Vector(m[0].size(), 0));
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+      C[i][j] = 0.0;
 
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++)
-      dataset >> m[i][j];
-  }
-
-  Matrix m1(m);
-
-  // print(m);
-  for (int j = 0; j < cols - 1; j++) {
-    // result = Matrix(m.size(), Vector(m[0].size(), 0));
-
-    {
-      thread_pool pool;
-      for (int i = 0; i < cols; i++) {
-        auto w = [&m, &m1, &result, i]() { diamondCol(m, m1, i, result); };
-        pool.submit(w);
+  for (kk = 0; kk < en; kk += bsize) {
+    for (jj = 0; jj < en; jj += bsize) {
+      for (i = 0; i < n; i++) {
+        for (j = jj; j < jj + bsize; j++) {
+          sum = C[i][j];
+          for (k = kk; k < kk + bsize; k++) {
+            sum += A[i][k] * B[k][j];
+          }
+          C[i][j] = sum;
+        }
       }
     }
-    m1 = result;
   }
-  print(result);
+
+  print(C);
+}
+
+Matrix partition(const Matrix &m, int offsetI, int offsetJ) {
+  Matrix p(m.size() / 2, Vector(m.size() / 2, 0));
+  for (int i = 0; i < m.size() / 2; i++) {
+    for (int j = 0; j < m.size() / 2; j++) {
+      p[i][j] = m[i + offsetI][j + offsetJ];
+    }
+  }
+  return p;
+}
+
+int main() {
+  // std::ifstream dataset;
+  // int rows, cols;
+  //
+  // dataset.open("files/test300.txt", std::ios::in);
+  // dataset >> rows >> cols;
+  // Matrix m(rows, Vector(cols));
+  // Matrix result(m.size(), Vector(m[0].size(), 0));
+  //
+  // for (int i = 0; i < rows; i++) {
+  //   for (int j = 0; j < cols; j++)
+  //     dataset >> m[i][j];
+  // }
+  //
+  // Matrix m1(m);
+  //
+  // // print(m);
+  // auto start = std::chrono::high_resolution_clock::now();
+  // for (int j = 0; j < cols - 1; j++) {
+  //   // result = Matrix(m.size(), Vector(m[0].size(), 0));
+  //
+  //   {
+  //     thread_pool pool;
+  //     for (int i = 0; i < cols; i++) {
+  //       auto w = [&m, &m1, &result, i]() { diamondCol(m, m1, i, result); };
+  //       pool.submit(w);
+  //     }
+  //   }
+  //   m1 = result;
+  // }
+  // auto end = std::chrono::high_resolution_clock::now();
+  // auto duration =
+  //     std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+  //         .count();
+  // std::cout << "Time Concurrency: " << duration << "ms" << std::endl;
+  // print(result);
+
+  Matrix A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  // Matrix C(A.size(), Vector(A.size(), 0));
+  // bijk(A, A, C);
+  int n = A.size() / 2;
+  Matrix p1 = partition(A, 0, 0);
+  Matrix p2 = partition(A, 0, n);
+  Matrix p3 = partition(A, n, 0);
+  Matrix p4 = partition(A, n, n);
+
+  print(p1);
+  std::cout << std::endl;
+  print(p2);
+  std::cout << std::endl;
+  print(p3);
+  std::cout << std::endl;
+  print(p4);
+  std::cout << std::endl;
 
   return 0;
 }
