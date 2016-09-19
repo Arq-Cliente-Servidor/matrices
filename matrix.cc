@@ -21,7 +21,8 @@ Vector getCol(const Matrix &m, int numCol) {
 void print(Matrix &m) {
   for (int i = 0; i < m.size(); i++) {
     for (int j = 0; j < m[i].size(); j++) {
-      if (j) cout << " ";
+      if (j)
+        cout << " ";
       cout << m[i][j];
     }
     cout << endl;
@@ -29,7 +30,7 @@ void print(Matrix &m) {
 }
 
 void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
-             int index, vector<bool> &available) {
+             int index, vector<bool> &available, int &cont) {
 
   available[index] = true;
   vector<int> col = getCol(m2, nCol);
@@ -39,6 +40,7 @@ void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result,
     }
   }
   available[index] = false;
+  cont++;
 }
 
 void multConcurrency(const Matrix &m1, const Matrix &m2) {
@@ -48,26 +50,31 @@ void multConcurrency(const Matrix &m1, const Matrix &m2) {
   }
 
   queue<int> q;
+  int cont = 0;
   Matrix result(m1.size(), Vector(m2[0].size(), 0));
   int n = thread::hardware_concurrency();
 
   vector<bool> available(n, false);
-  vector<thread *> th(n, nullptr);
+  vector<thread *> th(n);
 
   for (int i = 0; i < m1[0].size(); i++)
     q.push(i);
-  while (!q.empty()) {
+  while (true) {
     for (int i = 0; i < available.size(); i++) {
       if (!available[i] and !q.empty()) {
         int nCol = q.front();
         q.pop();
-        th[i] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), i, ref(available));
+        th[i] = new thread(multCol, cref(m1), cref(m2), nCol, ref(result), i,
+                           ref(available), ref(cont));
       }
     }
+    if (cont == m2[0].size())
+      break;
   }
 
   for (int i = 0; i < th.size(); i++) {
-    if (th[i] != nullptr) th[i]->join();
+    if (th[i]->joinable())
+      th[i]->join();
     delete th[i];
   }
 
@@ -102,17 +109,20 @@ void diamondConcurrency(const Matrix &m1) {
   int n = thread::hardware_concurrency();
 
   vector<bool> available(n, false);
-  vector<thread *> th(n, nullptr);
+  vector<thread *> th(n);
 
   for (int t = 0; t < m1.size() - 1; t++) {
-    for (int i = 0; i < m1[0].size(); i++) q.push(i);
+    for (int i = 0; i < m1[0].size(); i++)
+      q.push(i);
     result.assign(m1.size(), Vector(m1[0].size(), 0));
 
     while (true) {
       for (int i = 0; i < available.size(); i++) {
         if (!available[i] and !q.empty()) {
-          int nCol = q.front(); q.pop();
-          th[i] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result), i, ref(available), ref(cont));
+          int nCol = q.front();
+          q.pop();
+          th[i] = new thread(diamondCol, cref(m1), cref(m2), nCol, ref(result),
+                             i, ref(available), ref(cont));
         }
       }
       if (cont == m1.size()) {
@@ -122,17 +132,16 @@ void diamondConcurrency(const Matrix &m1) {
     }
 
     for (int i = 0; i < th.size(); i++) {
-      if (th[i] != nullptr) {
+      if (th[i]->joinable())
         th[i]->join();
-      }
       delete th[i];
     }
 
     m2 = result;
   }
 
-  cout << "Matrix:" << endl;
-  print(result);
+  // cout << "Matrix:" << endl;
+  // print(result);
 }
 
 // Sequential
@@ -181,7 +190,7 @@ int main(int argc, char const *argv[]) {
   ifstream dataset;
   int rows, cols;
 
-  dataset.open("files/test10.txt", ios::in);
+  dataset.open("files/test40.txt", ios::in);
   dataset >> rows >> cols;
   Matrix m(rows, Vector(cols));
 
@@ -195,8 +204,9 @@ int main(int argc, char const *argv[]) {
     // multSequential(m, m);
     diamondSequential(m);
     auto end = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
-    cout << "Time Sequential: " << duration << "ms" << endl;
+    auto duration =
+        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    cout << "Time Sequential: " << duration << "ns" << endl;
   }
 
   {
@@ -204,11 +214,11 @@ int main(int argc, char const *argv[]) {
     // multConcurrency(m, m);
     diamondConcurrency(m);
     auto end = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
-    cout << "Time Concurrency: " << duration << "ms" << endl;
+    auto duration =
+        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    cout << "Time Concurrency: " << duration << "ns" << endl;
   }
   // diamondConcurrency(m);
-
 
   return 0;
 }
