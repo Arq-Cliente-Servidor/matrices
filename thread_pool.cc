@@ -89,8 +89,8 @@ class thread_pool {
   }
 
 public:
-  thread_pool() : done(false) {
-    joiner = new join_threads(threads);
+  thread_pool() : done(false), joiner(new join_threads(threads)) {
+    // joiner(new join_threads(threads));
     unsigned const thread_count = std::thread::hardware_concurrency();
     try {
       for (unsigned i = 0; i < thread_count; ++i) {
@@ -141,11 +141,11 @@ Vector getCol(const Matrix &m, int numCol) {
 
 void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result) {
   // std::cerr << "start " << nCol << std::endl;
-  std::vector<int> col = getCol(m2, nCol);
+  // std::vector<int> col = getCol(m2, nCol);
   for (int i = 0; i < m1.size(); i++) {
     int mn = std::numeric_limits<int>::max();
     for (int j = 0; j < m1[i].size(); j++) {
-      mn = std::min(mn, m1[i][j] + col[j]);
+      mn = std::min(mn, m1[i][j] + m2[j][nCol]);
     }
     result[i][nCol] = mn;
   }
@@ -157,7 +157,7 @@ int main() {
   std::ifstream dataset;
   int rows, cols;
 
-  dataset.open("files/test40.txt", std::ios::in);
+  dataset.open("files/test1.txt", std::ios::in);
   dataset >> rows >> cols;
   Matrix m(rows, Vector(cols));
   Matrix result(m.size(), Vector(m[0].size(), 0));
@@ -174,7 +174,7 @@ int main() {
   //
   {
     thread_pool pool;
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 3; i++) {
       auto w = [&m, &result, i]() { diamondCol(m, m, i, result); };
       pool.submit(w);
     }
