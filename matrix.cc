@@ -195,7 +195,7 @@ int main(int argc, char const *argv[]) {
   ifstream dataset;
   int rows, cols;
 
-  dataset.open("files/test100.txt", ios::in);
+  dataset.open("files/test40.txt", ios::in);
   dataset >> rows >> cols;
   Matrix m(rows, Vector(cols));
 
