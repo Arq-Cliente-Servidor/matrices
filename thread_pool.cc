@@ -203,6 +203,7 @@ Matrix addMatrix(const Matrix &a, const Matrix &b) {
   return c;
 }
 
+// Secuencial
 Matrix multMatrix(const Matrix &m1, const Matrix &m2) {
   Matrix result(m1.size(), Vector(m1.size(), 0));
   for (int i = 0; i < m1.size(); i++) {
@@ -216,9 +217,31 @@ Matrix multMatrix(const Matrix &m1, const Matrix &m2) {
   return result;
 }
 
+void multCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result) {
+  for (int i = 0; i < m1.size(); i++) {
+    for (int j = 0; j < m1.size(); j++) {
+      result[i][nCol] += m1[i][j] * m2[j][nCol];
+    }
+  }
+}
+
+Matrix multConcurrency(const Matrix &m1, const Matrix &m2) {
+  Matrix result(m1.size(), Vector(m1[0].size(), 0));
+  {
+    thread_pool pool;
+    for (int i = 0; i < m1.size(); i++) {
+      auto w = [&m1, &m2, &result, i]() { multCol(m1, m2, i, result); };
+      pool.submit(w);
+    }
+  }
+  // print(result);
+  return result;
+}
+
 Matrix block_seq(const Matrix &A, const Matrix &B) {
   if (A.size() == 2) {
-    return multMatrix(A, B);
+    // return multMatrix(A, B);
+    return multConcurrency(A, B);
   } else {
     int sizeA = A.size() / 2;
     int sizeB = B.size() / 2;
@@ -250,36 +273,49 @@ Matrix block_seq(const Matrix &A, const Matrix &B) {
   }
 }
 
+void diamondConcurrency(const Matrix &m1) {
+  Matrix result(m1.size(), Vector(m1[0].size(), 0));
+  Matrix m2(m1);
+  for (int j = 0; j < m1.size() - 1; j++) {
+    {
+      thread_pool pool;
+      for (int i = 0; i < m1.size(); i++) {
+        auto w = [&m1, &m2, &result, i]() { diamondCol(m1, m2, i, result); };
+        pool.submit(w);
+      }
+    }
+    m2 = result;
+    print(result);
+    std::cout << std::endl;
+  }
+  print(result);
+}
+
 int main() {
-  // std::ifstream dataset;
+  std::ifstream dataset;
   // int rows, cols;
   //
-  // dataset.open("files/test300.txt", std::ios::in);
+  // dataset.open("files/test1024.txt", std::ios::in);
   // dataset >> rows >> cols;
   // Matrix m(rows, Vector(cols));
-  // Matrix result(m.size(), Vector(m[0].size(), 0));
   //
   // for (int i = 0; i < rows; i++) {
   //   for (int j = 0; j < cols; j++)
   //     dataset >> m[i][j];
   // }
-  //
-  // Matrix m1(m);
-  //
-  // // print(m);
+  Matrix m = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+
+  // m <> m = {{2, 3, 4, 5}
+  //           {6, 7, 8, 9},
+  //          {10, 11, 12, 13},
+  //          {14, 15, 16, 17}}
+
+  // print(m);
   // auto start = std::chrono::high_resolution_clock::now();
-  // for (int j = 0; j < cols - 1; j++) {
-  //   // result = Matrix(m.size(), Vector(m[0].size(), 0));
-  //
-  //   {
-  //     thread_pool pool;
-  //     for (int i = 0; i < cols; i++) {
-  //       auto w = [&m, &m1, &result, i]() { diamondCol(m, m1, i, result); };
-  //       pool.submit(w);
-  //     }
-  //   }
-  //   m1 = result;
-  // }
+  // Matrix result = block_seq(m, m);
+  // print(result);
+  // diamondConcurrency(m);
+  // multConcurrency(m, m);
   // auto end = std::chrono::high_resolution_clock::now();
   // auto duration =
   //     std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
@@ -287,10 +323,9 @@ int main() {
   // std::cout << "Time Concurrency: " << duration << "ms" << std::endl;
   // print(result);
 
-  Matrix A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
-  Matrix B = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
-  Matrix AA = {{1, 2}, {3, 4}};
-  Matrix BB = {{1, 2}, {3, 4}};
+  // Matrix B = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  // Matrix AA = {{1, 2}, {3, 4}};
+  // Matrix BB = {{1, 2}, {3, 4}};
   // Matrix C(A.size(), Vector(A.size(), 0));
   // bijk(A, A, C);
   // int n = A.size() / 2;
@@ -313,8 +348,8 @@ int main() {
   // std::cout << std::endl;
   // print(p4);
   // std::cout << std::endl;
-  Matrix C = block_seq(A, B);
-  print(C);
+  // Matrix C = block_seq(A, B);
+  // print(C);
 
   return 0;
 }
