@@ -240,8 +240,7 @@ Matrix multConcurrency(const Matrix &m1, const Matrix &m2) {
 
 Matrix block_seq(const Matrix &A, const Matrix &B) {
   if (A.size() == 2) {
-    // return multMatrix(A, B);
-    return multConcurrency(A, B);
+    return multMatrix(A, B);
   } else {
     int sizeA = A.size() / 2;
     int sizeB = B.size() / 2;
@@ -260,6 +259,65 @@ Matrix block_seq(const Matrix &A, const Matrix &B) {
     Matrix r1 = addMatrix(block_seq(a0, b1), block_seq(a1, b3));
     Matrix r2 = addMatrix(block_seq(a2, b0), block_seq(a3, b2));
     Matrix r3 = addMatrix(block_seq(a2, b1), block_seq(a3, b3));
+
+    Matrix result(A.size(), Vector(A.size(), 0));
+    int sizeResult = result.size() / 2;
+
+    rebuild(result, 0, 0, r0);
+    rebuild(result, 0, sizeResult, r1);
+    rebuild(result, sizeResult, 0, r2);
+    rebuild(result, sizeResult, sizeResult, r3);
+
+    return result;
+  }
+}
+
+Matrix diamondMatrix(const Matrix &m1, const Matrix &m2) {
+  Matrix result(m1.size(), Vector(m1.size(), 0));
+  for (int i = 0; i < m1.size(); i++) {
+    for (int j = 0; j < m1.size(); j++) {
+      int mn = std::numeric_limits<int>::max();
+      for (int k = 0; k < m1.size(); k++) {
+        mn = std::min(mn, m1[i][k] + m2[k][j]);
+      }
+      result[i][j] = mn;
+    }
+  }
+
+  return result;
+}
+
+Matrix minMatrix(const Matrix &A, const Matrix &B) {
+  Matrix C(A.size(), Vector(A.size(), std::numeric_limits<int>::max()));
+  for (int i = 0; i < A.size(); i++) {
+    for (int j = 0; j < A[i].size(); j++) {
+      C[i][j] = std::min(A[i][j], B[i][j]);
+    }
+  }
+  return C;
+}
+
+Matrix diamond_block_seq(const Matrix &A, const Matrix &B) {
+  if (A.size() == 2) {
+    return diamondMatrix(A, B);
+  } else {
+    int sizeA = A.size() / 2;
+    int sizeB = B.size() / 2;
+
+    Matrix a0 = partition(A, 0, 0);
+    Matrix a1 = partition(A, 0, sizeA);
+    Matrix a2 = partition(A, sizeA, 0);
+    Matrix a3 = partition(A, sizeA, sizeA);
+
+    Matrix b0 = partition(B, 0, 0);
+    Matrix b1 = partition(B, 0, sizeB);
+    Matrix b2 = partition(B, sizeB, 0);
+    Matrix b3 = partition(B, sizeB, sizeB);
+
+    Matrix r0 = minMatrix(diamond_block_seq(a0, b0), diamond_block_seq(a1, b2));
+    Matrix r1 = minMatrix(diamond_block_seq(a0, b1), diamond_block_seq(a1, b3));
+    Matrix r2 = minMatrix(diamond_block_seq(a2, b0), diamond_block_seq(a3, b2));
+    Matrix r3 = minMatrix(diamond_block_seq(a2, b1), diamond_block_seq(a3, b3));
 
     Matrix result(A.size(), Vector(A.size(), 0));
     int sizeResult = result.size() / 2;
@@ -304,6 +362,7 @@ int main() {
   //     dataset >> m[i][j];
   // }
   Matrix m = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  print(diamond_block_seq(m, m));
 
   // m <> m = {{2, 3, 4, 5}
   //           {6, 7, 8, 9},
