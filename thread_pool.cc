@@ -1,119 +1,6 @@
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <fstream>
-#include <iostream>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <vector>
-
-class join_threads {
-  std::vector<std::thread> &threads;
-
-public:
-  explicit join_threads(std::vector<std::thread> &threads_)
-      : threads(threads_) {}
-  ~join_threads() {
-    // std::cerr << "destructing joiner\n";
-    for (unsigned long i = 0; i < threads.size(); ++i) {
-      if (threads[i].joinable())
-        threads[i].join();
-    }
-  }
-};
-
-template <typename T> class threadsafe_queue {
-private:
-  mutable std::mutex mut;
-  std::queue<T> data_queue;
-  std::condition_variable data_cond;
-
-public:
-  threadsafe_queue() {}
-  void push(T data) {
-    std::lock_guard<std::mutex> lk(mut);
-    data_queue.push(std::move(data));
-    data_cond.notify_one();
-  }
-  void wait_and_pop(T &value) {
-    std::unique_lock<std::mutex> lk(mut);
-    data_cond.wait(lk, [this] { return !data_queue.empty(); });
-    value = std::move(data_queue.front());
-    data_queue.pop();
-  }
-  std::shared_ptr<T> wait_and_pop() {
-    std::unique_lock<std::mutex> lk(mut);
-    data_cond.wait(lk, [this] { return !data_queue.empty(); });
-    std::shared_ptr<T> res(std::make_shared<T>(std::move(data_queue.front())));
-
-    data_queue.pop();
-    return res;
-  }
-  bool try_pop(T &value) {
-    std::lock_guard<std::mutex> lk(mut);
-    if (data_queue.empty())
-      return false;
-    value = std::move(data_queue.front());
-    data_queue.pop();
-    return true;
-  }
-  std::shared_ptr<T> try_pop() {
-    std::lock_guard<std::mutex> lk(mut);
-    if (data_queue.empty())
-      return std::shared_ptr<T>();
-    std::shared_ptr<T> res(std::make_shared<T>(std::move(data_queue.front())));
-    data_queue.pop();
-    return res;
-  }
-  bool empty() const {
-    std::lock_guard<std::mutex> lk(mut);
-    return data_queue.empty();
-  }
-};
-
-class thread_pool {
-  std::atomic_bool done;
-  threadsafe_queue<std::function<void()>> work_queue;
-  std::vector<std::thread> threads;
-  join_threads *joiner;
-  void worker_thread() {
-    while (!done && !work_queue.empty()) {
-      std::function<void()> task;
-      if (work_queue.try_pop(task)) {
-        task();
-      } else {
-        std::this_thread::yield();
-      }
-    }
-  }
-
-public:
-  thread_pool() : done(false), joiner(new join_threads(threads)) {
-    // joiner(new join_threads(threads));
-    unsigned const thread_count = std::thread::hardware_concurrency();
-    try {
-      for (unsigned i = 0; i < thread_count; ++i) {
-        threads.push_back(std::thread(&thread_pool::worker_thread, this));
-      }
-    } catch (...) {
-      done = true;
-      throw;
-    }
-  }
-  ~thread_pool() {
-    joiner->~join_threads();
-    done = true;
-    // std::string s("Destructing pool ");
-    // s += std::to_string(work_queue.empty());
-    // s += '\n';
-    // std::cerr << s;
-  }
-  template <typename FunctionType> void submit(FunctionType f) {
-    work_queue.push(std::function<void()>(f));
-    //    std::cerr << std::this_thread::get_id() << std::endl;
-  }
-};
+#include "lib/SparseMatrix.hpp"
+#include "lib/ThreadPool.hpp"
+#include <cmath>
 
 using Matrix = std::vector<std::vector<int>>;
 using Vector = std::vector<int>;
@@ -131,48 +18,20 @@ void print(const Matrix &m) {
   std::cerr << "------------------------\n";
 }
 
-void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result) {
-  // std::cerr << "start " << nCol << std::endl;
-  // std::vector<int> col = getCol(m2, nCol);
-  for (int i = 0; i < m1.size(); i++) {
-    int mn = std::numeric_limits<int>::max();
-    for (int j = 0; j < m1[i].size(); j++) {
-      mn = std::min(mn, m1[i][j] + m2[j][nCol]);
-    }
-    result[i][nCol] = mn;
-  }
-  // print(result);
-  // std::cerr << "dcol\n";
-}
-
-void bijk(const Matrix &A, const Matrix &B, Matrix &C) {
-  int i, j, k, kk, jj;
-  double sum;
-  int n = A.size();
-  int en = n;
-  int bsize = n / 2;
-  // bsize * (n / bsize); /* Amount that fits evenly into blocks */
-
-  for (i = 0; i < n; i++)
-    for (j = 0; j < n; j++)
-      C[i][j] = 0.0;
-
-  for (kk = 0; kk < en; kk += bsize) {
-    for (jj = 0; jj < en; jj += bsize) {
-      for (i = 0; i < n; i++) {
-        for (j = jj; j < jj + bsize; j++) {
-          sum = C[i][j];
-          for (k = kk; k < kk + bsize; k++) {
-            sum += A[i][k] * B[k][j];
-          }
-          C[i][j] = sum;
-        }
-      }
-    }
-  }
-
-  print(C);
-}
+// void diamondCol(const Matrix &m1, const Matrix &m2, int nCol, Matrix &result)
+// {
+//   // std::cerr << "start " << nCol << std::endl;
+//   // std::vector<int> col = getCol(m2, nCol);
+//   for (int i = 0; i < m1.size(); i++) {
+//     int mn = std::numeric_limits<int>::max();
+//     for (int j = 0; j < m1[i].size(); j++) {
+//       mn = std::min(mn, m1[i][j] + m2[j][nCol]);
+//     }
+//     result[i][nCol] = mn;
+//   }
+//   // print(result);
+//   // std::cerr << "dcol\n";
+// }
 
 Matrix partition(const Matrix &m, int offsetI, int offsetJ) {
   Matrix p(m.size() / 2, Vector(m.size() / 2, 0));
@@ -182,6 +41,17 @@ Matrix partition(const Matrix &m, int offsetI, int offsetJ) {
     }
   }
   return p;
+}
+
+Matrix check(Matrix &m) {
+  int nSize = pow(2, ceil(log2(double(m.size()))));
+  if (m.size() == nSize)
+    return m;
+  m.resize(nSize);
+  for (int i = 0; i < nSize; i++) {
+    m[i].resize(nSize);
+  }
+  return m;
 }
 
 void rebuild(Matrix &result, int offsetI, int offsetJ, const Matrix &m) {
@@ -331,23 +201,23 @@ Matrix diamond_block_seq(const Matrix &A, const Matrix &B) {
   }
 }
 
-void diamondConcurrency(const Matrix &m1) {
-  Matrix result(m1.size(), Vector(m1[0].size(), 0));
-  Matrix m2(m1);
-  for (int j = 0; j < m1.size() - 1; j++) {
-    {
-      thread_pool pool;
-      for (int i = 0; i < m1.size(); i++) {
-        auto w = [&m1, &m2, &result, i]() { diamondCol(m1, m2, i, result); };
-        pool.submit(w);
-      }
-    }
-    m2 = result;
-    print(result);
-    std::cout << std::endl;
-  }
-  print(result);
-}
+// void diamondConcurrency(const Matrix &m1) {
+//   Matrix result(m1.size(), Vector(m1[0].size(), 0));
+//   Matrix m2(m1);
+//   for (int j = 0; j < m1.size() - 1; j++) {
+//     {
+//       thread_pool pool;
+//       for (int i = 0; i < m1.size(); i++) {
+//         auto w = [&m1, &m2, &result, i]() { diamondCol(m1, m2, i, result); };
+//         pool.submit(w);
+//       }
+//     }
+//     m2 = result;
+//     print(result);
+//     std::cout << std::endl;
+//   }
+//   print(result);
+// }
 
 int main() {
   std::ifstream dataset;
@@ -361,8 +231,37 @@ int main() {
   //   for (int j = 0; j < cols; j++)
   //     dataset >> m[i][j];
   // }
-  Matrix m = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
-  print(diamond_block_seq(m, m));
+  SparseMatrix<int> m(3, 3);
+  m.set(1, 0, 0);
+  m.set(2, 0, 1);
+  m.set(3, 0, 2);
+  m.set(4, 1, 0);
+  m.set(5, 1, 1);
+  m.set(6, 1, 2);
+  m.set(7, 2, 0);
+  m.set(8, 2, 1);
+  m.set(9, 2, 2);
+  // m.set(10, 2, 1);
+  // m.set(11, 2, 2);
+  // m.set(12, 2, 3);
+  // m.set(13, 3, 0);
+  // m.set(14, 3, 1);
+  // m.set(15, 3, 2);
+  // m.set(16, 3, 3);
+  // SparseMatrix<int> result(3, 3);
+  // diamondCol(m, m2, 0, result);
+  // SparseMatrix<int> result = diamondConcurrency(m);
+  // result.print();
+  // Matrix m1 = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15,
+  // 16}};
+  // Matrix result2(4, Vector(4, 0));
+  // diamondCol(m1, m1, 0, result2);
+  // print(result2);
+  // print(diamond_block_seq(m, m));
+
+  Matrix m4 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+  Matrix result3 = block_seq(check(m4), check(m4));
+  print(result3);
 
   // m <> m = {{2, 3, 4, 5}
   //           {6, 7, 8, 9},
@@ -382,7 +281,8 @@ int main() {
   // std::cout << "Time Concurrency: " << duration << "ms" << std::endl;
   // print(result);
 
-  // Matrix B = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+  // Matrix B = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15,
+  // 16}};
   // Matrix AA = {{1, 2}, {3, 4}};
   // Matrix BB = {{1, 2}, {3, 4}};
   // Matrix C(A.size(), Vector(A.size(), 0));
