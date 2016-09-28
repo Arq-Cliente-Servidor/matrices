@@ -1,5 +1,6 @@
 #include "lib/SparseMatrix.hpp"
 #include "lib/ThreadPool.hpp"
+#include <chrono>
 #include <cmath>
 
 using Matrix = std::vector<std::vector<int>>;
@@ -221,26 +222,47 @@ Matrix diamond_block_seq(const Matrix &A, const Matrix &B) {
 
 int main() {
   std::ifstream dataset;
-  // int rows, cols;
-  //
-  // dataset.open("files/test1024.txt", std::ios::in);
-  // dataset >> rows >> cols;
-  // Matrix m(rows, Vector(cols));
-  //
-  // for (int i = 0; i < rows; i++) {
-  //   for (int j = 0; j < cols; j++)
-  //     dataset >> m[i][j];
-  // }
-  SparseMatrix<int> m(3, 3);
-  m.set(1, 0, 0);
-  m.set(2, 0, 1);
-  m.set(3, 0, 2);
-  m.set(4, 1, 0);
-  m.set(5, 1, 1);
-  m.set(6, 1, 2);
-  m.set(7, 2, 0);
-  m.set(8, 2, 1);
-  m.set(9, 2, 2);
+  int rows, cols;
+
+  std::cout << "Loading Matrix... " << std::flush;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  std::cout << std::endl;
+
+  std::cout << "Done." << std::endl;
+
+  dataset.open("files/test500.txt", std::ios::in);
+  dataset >> rows >> cols;
+
+  std::cout << "DATASET INFORMATION" << std::endl;
+  std::cout << "    Number of nodes: " << rows << std::endl;
+  std::cout << "    Number of arcs: " << cols << std::endl;
+  SparseMatrix<int> m(rows, cols);
+
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      int tmp;
+      dataset >> tmp;
+      m.set(tmp, i, j);
+    }
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+            << std::endl;
+
+  // SparseMatrix<int> m(3, 3);
+  // m.set(1, 0, 0);
+  // m.set(2, 0, 1);
+  // m.set(3, 0, 2);
+  // m.set(4, 1, 0);
+  // m.set(5, 1, 1);
+  // m.set(6, 1, 2);
+  // m.set(7, 2, 0);
+  // m.set(8, 2, 1);
+  // m.set(9, 2, 2);
   // m.set(10, 2, 1);
   // m.set(11, 2, 2);
   // m.set(12, 2, 3);
@@ -250,8 +272,19 @@ int main() {
   // m.set(16, 3, 3);
   // SparseMatrix<int> result(3, 3);
   // diamondCol(m, m2, 0, result);
-  // SparseMatrix<int> result = diamondConcurrency(m);
+  // SparseMatrix<int> result = multConcurrency(m, m);
+  //
+
+  start = std::chrono::high_resolution_clock::now();
+  SparseMatrix<int> result = multConcurrency(m, m);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed =
+      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+            << std::endl;
+
   // result.print();
+
   // Matrix m1 = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15,
   // 16}};
   // Matrix result2(4, Vector(4, 0));
@@ -259,9 +292,14 @@ int main() {
   // print(result2);
   // print(diamond_block_seq(m, m));
 
-  Matrix m4 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  Matrix result3 = block_seq(check(m4), check(m4));
-  print(result3);
+  // Matrix m4 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+  // Matrix result3 = block_seq(check(m4), check(m4));
+  // print(result3);
+
+  // m4 * m4
+  // 30 36 42 0
+  // 66 81 96 0
+  // 102 126 150
 
   // m <> m = {{2, 3, 4, 5}
   //           {6, 7, 8, 9},
