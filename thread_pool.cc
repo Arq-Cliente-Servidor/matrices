@@ -44,6 +44,58 @@ Matrix partition(const Matrix &m, int offsetI, int offsetJ) {
   return p;
 }
 
+template <typename T>
+SparseMatrix<T> partitionSM(const SparseMatrix<T> &m, int offsetI,
+                            int offsetJ) {
+  SparseMatrix<T> p(m.getNumRows() / 2, m.getNumCols() / 2);
+  for (int i = 0; i < m.getNumRows() / 2; i++) {
+    for (int j = 0; j < m.getNumCols() / 2; j++) {
+      p.set(m.get(i + offsetI, j + offsetJ), i, j);
+    }
+  }
+  // p.print();
+  // cout << endl;
+  return p;
+}
+
+template <typename T>
+void rebuildSM(SparseMatrix<T> &result, int offsetI, int offsetJ,
+               const SparseMatrix<T> &m) {
+
+  // cout << "Bloque:" << endl;
+  // m.print();
+  for (int i = 0; i < m.getNumRows(); i++) {
+    for (int j = 0; j < m.getNumCols(); j++) {
+      result.set(m.get(i, j), i + offsetI, j + offsetJ);
+    }
+  }
+  // cout << endl;
+  // result.print();
+  // cout << endl;
+}
+
+void rebuild(Matrix &result, int offsetI, int offsetJ, const Matrix &m) {
+  for (int i = 0; i < m.size(); i++) {
+    for (int j = 0; j < m[i].size(); j++) {
+      result[i + offsetI][j + offsetJ] = m[i][j];
+    }
+  }
+}
+
+template <typename T> SparseMatrix<T> checkSM(SparseMatrix<T> &m) {
+  int nSize = pow(2, ceil(log2(double(m.getNumRows()))));
+  if (m.getNumRows() == nSize)
+    return m;
+
+  SparseMatrix<T> newM(nSize, nSize);
+  for (int i = 0; i < m.getNumRows(); i++) {
+    for (int j = 0; j < m.getNumCols(); j++) {
+      newM.set(m.get(i, j), i, j);
+    }
+  }
+  return newM;
+}
+
 Matrix check(Matrix &m) {
   int nSize = pow(2, ceil(log2(double(m.size()))));
   if (m.size() == nSize)
@@ -53,14 +105,6 @@ Matrix check(Matrix &m) {
     m[i].resize(nSize);
   }
   return m;
-}
-
-void rebuild(Matrix &result, int offsetI, int offsetJ, const Matrix &m) {
-  for (int i = 0; i < m.size(); i++) {
-    for (int j = 0; j < m[i].size(); j++) {
-      result[i + offsetI][j + offsetJ] = m[i][j];
-    }
-  }
 }
 
 Matrix addMatrix(const Matrix &a, const Matrix &b) {
@@ -168,6 +212,18 @@ Matrix minMatrix(const Matrix &A, const Matrix &B) {
   return C;
 }
 
+template <typename T>
+SparseMatrix<T> minMatrixSM(const SparseMatrix<T> &a,
+                            const SparseMatrix<T> &b) {
+  SparseMatrix<T> result(a.getNumRows(), a.getNumCols());
+  for (int i = 0; i < a.getNumRows(); i++) {
+    for (int j = 0; j < a.getNumCols(); j++) {
+      result.set(min(a.get(i, j), b.get(i, j)), i, j);
+    }
+  }
+  return result;
+}
+
 Matrix diamond_block_seq(const Matrix &A, const Matrix &B) {
   if (A.size() == 2) {
     return diamondMatrix(A, B);
@@ -202,6 +258,63 @@ Matrix diamond_block_seq(const Matrix &A, const Matrix &B) {
   }
 }
 
+template <typename T>
+SparseMatrix<T> diamondSM(const SparseMatrix<T> &a, const SparseMatrix<T> &b) {
+  SparseMatrix<T> result(a.getNumRows(), b.getNumCols());
+  for (int i = 0; i < a.getNumRows(); i++) {
+    for (int j = 0; j < b.getNumCols(); j++) {
+      T mn = numeric_limits<T>::max();
+      for (int k = 0; k < b.getNumRows(); k++) {
+        int val = a.get(i, k) + b.get(k, j);
+        if (val < mn && val > 0)
+          mn = val;
+      }
+      result.set(mn, i, j);
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SparseMatrix<T> diamond_block_seqSM(const SparseMatrix<T> &A,
+                                    const SparseMatrix<T> &B) {
+  if (A.getNumRows() == 2) {
+    return diamondSM(A, B);
+  } else {
+    int sizeA = A.getNumRows() / 2;
+    int sizeB = B.getNumRows() / 2;
+
+    SparseMatrix<T> a0 = partitionSM(A, 0, 0);
+    SparseMatrix<T> a1 = partitionSM(A, 0, sizeA);
+    SparseMatrix<T> a2 = partitionSM(A, sizeA, 0);
+    SparseMatrix<T> a3 = partitionSM(A, sizeA, sizeA);
+
+    SparseMatrix<T> b0 = partitionSM(B, 0, 0);
+    SparseMatrix<T> b1 = partitionSM(B, 0, sizeB);
+    SparseMatrix<T> b2 = partitionSM(B, sizeB, 0);
+    SparseMatrix<T> b3 = partitionSM(B, sizeB, sizeB);
+
+    SparseMatrix<T> r0 =
+        minMatrixSM(diamond_block_seqSM(a0, b0), diamond_block_seqSM(a1, b2));
+    SparseMatrix<T> r1 =
+        minMatrixSM(diamond_block_seqSM(a0, b1), diamond_block_seqSM(a1, b3));
+    SparseMatrix<T> r2 =
+        minMatrixSM(diamond_block_seqSM(a2, b0), diamond_block_seqSM(a3, b2));
+    SparseMatrix<T> r3 =
+        minMatrixSM(diamond_block_seqSM(a2, b1), diamond_block_seqSM(a3, b3));
+
+    SparseMatrix<T> result(A.getNumRows(), A.getNumCols());
+    int sizeResult = result.getNumRows() / 2;
+
+    rebuildSM(result, 0, 0, r0);
+    rebuildSM(result, 0, sizeResult, r1);
+    rebuildSM(result, sizeResult, 0, r2);
+    rebuildSM(result, sizeResult, sizeResult, r3);
+
+    return result;
+  }
+}
+
 // void diamondConcurrency(const Matrix &m1) {
 //   Matrix result(m1.size(), Vector(m1[0].size(), 0));
 //   Matrix m2(m1);
@@ -224,43 +337,44 @@ int main() {
   std::ifstream dataset;
   int rows, cols;
 
-  std::cout << "Loading Matrix... " << std::flush;
-  auto start = std::chrono::high_resolution_clock::now();
+  // std::cout << "Loading Matrix... " << std::flush;
+  // auto start = std::chrono::high_resolution_clock::now();
+  //
+  // std::cout << std::endl;
+  //
+  // dataset.open("files/test300.txt", std::ios::in);
+  // dataset >> rows >> cols;
+  //
+  // std::cout << "DATASET INFORMATION" << std::endl;
+  // std::cout << "    Number of nodes: " << rows << std::endl;
+  // std::cout << "    Number of arcs: " << cols << std::endl;
+  // SparseMatrix<int> m(rows, cols);
+  //
+  // for (int i = 0; i < rows; i++) {
+  //   for (int j = 0; j < cols; j++) {
+  //     int tmp;
+  //     dataset >> tmp;
+  //     m.set(tmp, i, j);
+  //   }
+  // }
+  //
+  // auto end = std::chrono::high_resolution_clock::now();
+  // auto elapsed =
+  //     std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  // std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+  //           << std::endl;
 
-  std::cout << std::endl;
+  SparseMatrix<int> m(3, 3);
+  m.set(1, 0, 0);
+  m.set(2, 0, 1);
+  m.set(3, 0, 2);
+  m.set(4, 1, 0);
+  m.set(5, 1, 1);
+  m.set(6, 1, 2);
+  m.set(7, 2, 0);
+  m.set(8, 2, 1);
+  m.set(9, 2, 2);
 
-  dataset.open("files/test300.txt", std::ios::in);
-  dataset >> rows >> cols;
-
-  std::cout << "DATASET INFORMATION" << std::endl;
-  std::cout << "    Number of nodes: " << rows << std::endl;
-  std::cout << "    Number of arcs: " << cols << std::endl;
-  SparseMatrix<int> m(rows, cols);
-
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
-      int tmp;
-      dataset >> tmp;
-      m.set(tmp, i, j);
-    }
-  }
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
-            << std::endl;
-
-  // SparseMatrix<int> m(3, 3);
-  // m.set(1, 0, 0);
-  // m.set(2, 0, 1);
-  // m.set(3, 0, 2);
-  // m.set(4, 1, 0);
-  // m.set(5, 1, 1);
-  // m.set(6, 1, 2);
-  // m.set(7, 2, 0);
-  // m.set(8, 2, 1);
-  // m.set(9, 2, 2);
   // m.set(10, 2, 1);
   // m.set(11, 2, 2);
   // m.set(12, 2, 3);
@@ -271,15 +385,17 @@ int main() {
   // SparseMatrix<int> result(3, 3);
   // diamondCol(m, m2, 0, result);
   // SparseMatrix<int> result = multConcurrency(m, m);
-  //
+  SparseMatrix<int> ch = checkSM(m);
+  SparseMatrix<int> result = diamond_block_seqSM(ch, ch);
+  result.print();
 
-  start = std::chrono::high_resolution_clock::now();
-  SparseMatrix<int> result = multConcurrency(m, m);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
-            << std::endl;
+  // start = std::chrono::high_resolution_clock::now();
+  // SparseMatrix<int> result = multConcurrency(m, m);
+  // end = std::chrono::high_resolution_clock::now();
+  // elapsed =
+  //     std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  // std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+  //           << std::endl;
 
   // result.print();
 

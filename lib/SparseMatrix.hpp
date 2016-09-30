@@ -94,7 +94,7 @@ public:
     }
   }
   // Imprimir la matriz dispersa como una matriz normal
-  void print() {
+  void print() const {
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
         if (j)
@@ -115,6 +115,21 @@ public:
           accum += val[k] * b.get(colInd[k], j);
         }
         result.set(accum, i, j);
+      }
+    }
+    return result;
+  }
+
+  SparseMatrix<T> diamond(const SparseMatrix<T> &b) {
+    assert(cols == b.getNumRows());
+    SparseMatrix<T> result(rows, b.getNumCols());
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < b.getNumCols(); j++) {
+        T mn = numeric_limits<T>::max();
+        for (int k = rowPtr[i]; k < rowPtr[i + 1]; k++) {
+          mn = min(mn, val[k] + b.get(colInd[k], j));
+        }
+        result.set(mn, i, j);
       }
     }
     return result;
