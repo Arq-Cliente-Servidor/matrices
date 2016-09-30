@@ -37,7 +37,7 @@ public:
   vector<T> getVal() const { return val; }
 
   T get(int r, int c) const {
-    if ((r < 0 || c < 0) || (r > rowPtr.size() - 1))
+    if ((r < 0 || c < 0) || (r >= rows || c >= cols) || (r > rowPtr.size() - 1))
       return 0;
     int index = rowPtr[r];
     int endRow = rowPtr[r + 1] - index;
@@ -48,35 +48,13 @@ public:
     return T(0);
   }
 
-  // T get(int r, int c) {
-  //   // Retorna el elemento que hay en la posición (r,c)
-  //   if ((r < 0 || c < 0) || (r > rowPtr.size() - 1))
-  //     return 0;
-  //   else {
-  //     int init = rowPtr[r];
-  //     int finish = rowPtr[r + 1];
-  //     int col = -1;
-  //     for (int i = init; i < finish; i++) {
-  //       if (colInd[i] == c) {
-  //         col = i;
-  //         break;
-  //       }
-  //     }
-  //     if (col == -1)
-  //       return 0;
-  //     else {
-  //       return val[col];
-  //     }
-  //   }
-  // }
-
   // Version añadiendo elementos en desorden
   void set(T value, int r, int c) {
     // Asigna value al elemento en la posición (r,c)
     if ((r > rows || c > cols) || (r < 0 || c < 0)) {
       cout << "row or col invalid "
            << "[" << r << ", " << c << "]" << endl;
-      // return;
+      return;
     }
     int init = rowPtr[r];
     int finish = rowPtr[r + 1];
