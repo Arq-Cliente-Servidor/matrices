@@ -125,7 +125,6 @@ template <typename T>
 void multCol(const SparseMatrix<T> &m1, const SparseMatrix<T> &m2, int nRow,
              vector<SparseMatrix<T>> &results) {
 
-  results[nRow] = SparseMatrix<T>(1, m2.getNumCols());
   for (int i = 0; i < m2.getNumCols(); i++) {
     T accum = T(0);
     for (int j = m1.getRowPtr()[i]; j < m1.getRowPtr()[i + 1]; j++) {
@@ -139,7 +138,7 @@ template <typename T>
 SparseMatrix<T> multConcurrency(const SparseMatrix<T> &m1,
                                 const SparseMatrix<T> &m2) {
   assert(m1.getNumCols() == m2.getNumRows());
-  vector<SparseMatrix<T>> results(m1.getNumRows());
+  vector<SparseMatrix<T>> results(m1.getNumRows(), {1, m2.getNumCols()});
   SparseMatrix<T> result(m1.getNumRows(), m2.getNumCols());
   {
     thread_pool pool;
@@ -162,7 +161,6 @@ template <typename T>
 void diamondCol(const SparseMatrix<T> &m1, const SparseMatrix<T> &m2, int nRow,
                 vector<SparseMatrix<T>> &results) {
 
-  results[nRow] = SparseMatrix<T>(1, m2.getNumCols());
   for (int i = 0; i < m1.getNumCols(); i++) {
     T mn = std::numeric_limits<T>::max();
     for (int j = m1.getRowPtr()[i]; j < m1.getRowPtr()[i + 1]; j++) {
@@ -180,7 +178,7 @@ SparseMatrix<T> diamondConcurrency(const SparseMatrix<T> &m1) {
   SparseMatrix<T> result(m1.getNumRows(), m2.getNumCols());
 
   for (int j = 0; j < m1.getNumRows() - 1; j++) {
-    vector<SparseMatrix<T>> results(m1.getNumRows());
+    vector<SparseMatrix<T>> results(m1.getNumRows(), {1, m2.getNumCols()});
     {
       thread_pool pool;
       for (int i = 0; i < m1.getNumRows(); i++) {

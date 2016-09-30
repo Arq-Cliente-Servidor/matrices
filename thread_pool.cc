@@ -229,9 +229,7 @@ int main() {
 
   std::cout << std::endl;
 
-  std::cout << "Done." << std::endl;
-
-  dataset.open("files/test500.txt", std::ios::in);
+  dataset.open("files/test300.txt", std::ios::in);
   dataset >> rows >> cols;
 
   std::cout << "DATASET INFORMATION" << std::endl;
