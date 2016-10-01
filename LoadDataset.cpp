@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
             << std::endl;
 
   // hacer cosas
+  std::cout << "Init mult..." << std::endl;
   start = std::chrono::high_resolution_clock::now();
   SparseMatrix<float> result = multConcurrency(mat, mat);
   end = std::chrono::high_resolution_clock::now();

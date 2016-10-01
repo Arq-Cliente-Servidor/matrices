@@ -147,21 +147,27 @@ void multCol(const SparseMatrix<T> &m1, const SparseMatrix<T> &m2, int nRow,
     }
     results[nRow].set(accum, 0, i);
   }
+  // cout << "Result:" << endl;
+  // results[nRow].print();
 }
 
 template <typename T>
 SparseMatrix<T> multConcurrency(const SparseMatrix<T> &m1,
                                 const SparseMatrix<T> &m2) {
+
+  // Check
   assert(m1.getNumCols() == m2.getNumRows());
+
+  thread_pool *pool = new thread_pool();
   vector<SparseMatrix<T>> results(m1.getNumRows(), {1, m2.getNumCols()});
   SparseMatrix<T> result(m1.getNumRows(), m2.getNumCols());
-  {
-    thread_pool pool;
-    for (int i = 0; i < m1.getNumRows(); i++) {
-      auto func = [&m1, &m2, i, &results]() { multCol(m1, m2, i, results); };
-      pool.submit(func);
-    }
+
+  for (int i = 0; i < m1.getNumRows(); i++) {
+    auto func = [&m1, &m2, i, &results]() { multCol(m1, m2, i, results); };
+    pool->submit(func);
   }
+
+  delete pool;
 
   for (int i = 0; i < results.size(); i++) {
     for (int j = 0; j < results[i].getNumCols(); j++) {
@@ -190,19 +196,19 @@ template <typename T>
 SparseMatrix<T> diamondConcurrency(const SparseMatrix<T> &m1) {
   SparseMatrix<T> m2(m1);
   assert(m1.getNumCols() == m2.getNumRows());
+
+  vector<SparseMatrix<T>> results(m1.getNumRows(), {1, m2.getNumCols()});
   SparseMatrix<T> result(m1.getNumRows(), m2.getNumCols());
+  thread_pool *pool;
 
   for (int j = 0; j < m1.getNumRows() - 1; j++) {
-    vector<SparseMatrix<T>> results(m1.getNumRows(), {1, m2.getNumCols()});
-    {
-      thread_pool pool;
-      for (int i = 0; i < m1.getNumRows(); i++) {
-        auto func = [&m1, &m2, i, &results]() {
-          diamondCol(m1, m2, i, results);
-        };
-        pool.submit(func);
-      }
+    pool = new thread_pool();
+    for (int i = 0; i < m1.getNumRows(); i++) {
+      auto func = [&m1, &m2, i, &results]() { diamondCol(m1, m2, i, results); };
+      pool->submit(func);
     }
+
+    delete pool;
 
     for (int i = 0; i < results.size(); i++) {
       for (int j = 0; j < results[i].getNumCols(); j++) {
@@ -212,5 +218,6 @@ SparseMatrix<T> diamondConcurrency(const SparseMatrix<T> &m1) {
 
     m2 = result;
   }
+
   return result;
 }

@@ -2,6 +2,7 @@
 #include "lib/ThreadPool.hpp"
 #include <chrono>
 #include <cmath>
+#include <fstream>
 
 using Matrix = std::vector<std::vector<int>>;
 using Vector = std::vector<int>;
@@ -384,9 +385,9 @@ int main() {
   // m.set(16, 3, 3);
   // SparseMatrix<int> result(3, 3);
   // diamondCol(m, m2, 0, result);
-  // SparseMatrix<int> result = multConcurrency(m, m);
-  SparseMatrix<int> ch = checkSM(m);
-  SparseMatrix<int> result = diamond_block_seqSM(ch, ch);
+  SparseMatrix<int> result = diamondConcurrency(m);
+  // SparseMatrix<int> ch = checkSM(m);
+  // SparseMatrix<int> result = diamond_block_seqSM(ch, ch);
   result.print();
 
   // start = std::chrono::high_resolution_clock::now();
