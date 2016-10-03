@@ -2,6 +2,7 @@
 
 #include "ThreadPool.hpp"
 #include <cassert>
+#include <cmath>
 #include <vector>
 
 using namespace std;
@@ -38,12 +39,10 @@ public:
 
   T get(int r, int c) const {
     if ((r < 0 || c < 0) || (r >= rows || c >= cols) || (r > rowPtr.size() - 1))
-      return 0;
-    int index = rowPtr[r];
-    int endRow = rowPtr[r + 1] - index;
-    for (int i = 0; i < endRow; i++) {
-      if (colInd[index + i] == c)
-        return val[index + i];
+      return T(0);
+    for (int i = rowPtr[r]; i < rowPtr[r + 1]; i++) {
+      if (colInd[i] == c)
+        return val[i];
     }
     return T(0);
   }
@@ -94,9 +93,11 @@ public:
     }
   }
   // Imprimir la matriz dispersa como una matriz normal
-  void print() const {
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
+  void print(int rw = 0, int cl = 0) const {
+    int r = (rw)? rw : rows;
+    int c = (cl)? cl : cols;
+    for (int i = 0; i < r; i++) {
+      for (int j = 0; j < c; j++) {
         if (j)
           cout << " ";
         cout << get(i, j);
@@ -120,7 +121,7 @@ public:
     return result;
   }
 
-  SparseMatrix<T> diamond(const SparseMatrix<T> &b) {
+  SparseMatrix<T> diamond(const SparseMatrix<T> &b) const {
     assert(cols == b.getNumRows());
     SparseMatrix<T> result(rows, b.getNumCols());
     for (int i = 0; i < rows; i++) {
@@ -133,6 +134,39 @@ public:
       }
     }
     return result;
+  }
+
+  SparseMatrix<T> partition(int offsetI, int offsetJ) const {
+    SparseMatrix<T> p(getNumRows() / 2, getNumCols() / 2);
+    for (int i = 0; i < getNumRows() / 2; i++) {
+      for (int j = 0; j < getNumCols() / 2; j++) {
+        p.set(get(i + offsetI, j + offsetJ), i, j);
+      }
+    }
+
+    return p;
+  }
+
+  void rebuild(SparseMatrix<T> &result, int offsetI, int offsetJ) {
+    for (int i = 0; i < getNumRows(); i++) {
+      for (int j = 0; j < getNumCols(); j++) {
+        result.set(get(i, j), i + offsetI, j + offsetJ);
+      }
+    }
+  }
+
+  SparseMatrix<T> check() {
+    int nSize = pow(2, ceil(log2(double(getNumRows()))));
+    if (getNumRows() == nSize)
+      return *this;
+
+    SparseMatrix<T> newM(nSize, nSize);
+    for (int i = 0; i < getNumRows(); i++) {
+      for (int j = 0; j < getNumCols(); j++) {
+        newM.set(get(i, j), i, j);
+      }
+    }
+    return newM;
   }
 };
 
@@ -220,4 +254,56 @@ SparseMatrix<T> diamondConcurrency(const SparseMatrix<T> &m1) {
   }
 
   return result;
+}
+
+template <typename T>
+SparseMatrix<T> minMatrix(const SparseMatrix<T> &a,
+                          const SparseMatrix<T> &b) {
+  SparseMatrix<T> result(a.getNumRows(), a.getNumCols());
+  for (int i = 0; i < a.getNumRows(); i++) {
+    for (int j = 0; j < a.getNumCols(); j++) {
+      result.set(min(a.get(i, j), b.get(i, j)), i, j);
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SparseMatrix<T> diamond_block_seq(const SparseMatrix<T> &A,
+                                  const SparseMatrix<T> &B) {
+  if (A.getNumRows() == 2) {
+    return A.diamond(B);
+  } else {
+    int sizeA = A.getNumRows() / 2;
+    int sizeB = B.getNumRows() / 2;
+
+    SparseMatrix<T> a0 = A.partition(0, 0);
+    SparseMatrix<T> a1 = A.partition(0, sizeA);
+    SparseMatrix<T> a2 = A.partition(sizeA, 0);
+    SparseMatrix<T> a3 = A.partition(sizeA, sizeA);
+
+    SparseMatrix<T> b0 = B.partition(0, 0);
+    SparseMatrix<T> b1 = B.partition(0, sizeB);
+    SparseMatrix<T> b2 = B.partition(sizeB, 0);
+    SparseMatrix<T> b3 = B.partition(sizeB, sizeB);
+
+    SparseMatrix<T> r0 =
+        minMatrix(diamond_block_seq(a0, b0), diamond_block_seq(a1, b2));
+    SparseMatrix<T> r1 =
+        minMatrix(diamond_block_seq(a0, b1), diamond_block_seq(a1, b3));
+    SparseMatrix<T> r2 =
+        minMatrix(diamond_block_seq(a2, b0), diamond_block_seq(a3, b2));
+    SparseMatrix<T> r3 =
+        minMatrix(diamond_block_seq(a2, b1), diamond_block_seq(a3, b3));
+
+    SparseMatrix<T> result(A.getNumRows(), A.getNumCols());
+    int sizeResult = result.getNumRows() / 2;
+
+    r0.rebuild(result, 0, 0);
+    r1.rebuild(result, 0, sizeResult);
+    r2.rebuild(result, sizeResult, 0);
+    r3.rebuild(result, sizeResult, sizeResult);
+
+    return result;
+  }
 }
