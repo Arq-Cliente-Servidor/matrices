@@ -19,23 +19,32 @@ public:
   SparseMatrix() : rows(0), cols(0), rowPtr(rows + 1, T(0)) {}
   SparseMatrix(int r, int c) : rows(r), cols(c), rowPtr(r + 1, T(0)) {}
   // Copy Constructor
-  SparseMatrix<T> &operator=(const SparseMatrix<T> &other) {
-    rows = other.getNumRows();
-    cols = other.getNumCols();
-    rowPtr = other.getRowPtr();
-    val = other.getVal();
-    return *this;
-  }
+  // SparseMatrix<T> &operator=(const SparseMatrix<T> &other) {
+  //   rows = other.getNumRows();
+  //   cols = other.getNumCols();
+  //   rowPtr = other.getRowPtr();
+  //   val = other.getVal();
+  //   return *this;
+  // }
+  SparseMatrix(const SparseMatrix<T> &) = default;
+
+  // SparseMatrix(SparseMatrix<T> &&) = default;
+
+  SparseMatrix<T> &operator=(const SparseMatrix<T> &other) = default;
+
+  SparseMatrix<T> &operator=(SparseMatrix<T> &&other) = default;
 
   int getNumCols() const { return cols; }
 
   int getNumRows() const { return rows; }
 
-  vector<int> getColInd() const { return colInd; }
+  const vector<int> &getColInd() const { return colInd; }
 
-  vector<int> getRowPtr() const { return rowPtr; }
+  const vector<int> &getRowPtr() const { return rowPtr; }
 
-  vector<T> getVal() const { return val; }
+  const vector<T> &getVal() const { return val; }
+
+  T getValElement(int i) const { return val[i]; }
 
   T get(int r, int c) const {
     if ((r < 0 || c < 0) || (r >= rows || c >= cols) || (r > rowPtr.size() - 1))
@@ -94,8 +103,8 @@ public:
   }
   // Imprimir la matriz dispersa como una matriz normal
   void print(int rw = 0, int cl = 0) const {
-    int r = (rw)? rw : rows;
-    int c = (cl)? cl : cols;
+    int r = (rw) ? rw : rows;
+    int c = (cl) ? cl : cols;
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
         if (j)
@@ -115,23 +124,34 @@ public:
         for (int k = rowPtr[i]; k < rowPtr[i + 1]; k++) {
           accum += val[k] * b.get(colInd[k], j);
         }
+        if (accum == T(0))
+          continue;
         result.set(accum, i, j);
       }
     }
     return result;
   }
 
-  SparseMatrix<T> diamond(const SparseMatrix<T> &b) const {
+  SparseMatrix<T> diamond() const {
+    SparseMatrix<T> b(*this);
     assert(cols == b.getNumRows());
     SparseMatrix<T> result(rows, b.getNumCols());
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < b.getNumCols(); j++) {
-        T mn = numeric_limits<T>::max();
-        for (int k = rowPtr[i]; k < rowPtr[i + 1]; k++) {
-          mn = min(mn, val[k] + b.get(colInd[k], j));
+    for (int it = 0; it < rows - 1; it++) {
+      for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < b.getNumCols(); j++) {
+          T mn = numeric_limits<T>::max();
+          for (int k = rowPtr[i]; k < rowPtr[i + 1]; k++) {
+            mn = min(mn, val[k] + b.get(colInd[k], j));
+          }
+          result.set(mn, i, j);
         }
-        result.set(mn, i, j);
       }
+      // cout << "result" << endl;
+      // result.print();
+      b = result;
+      // cout << "b" << endl;
+      // b.print();
+      // cout << endl;
     }
     return result;
   }
@@ -168,6 +188,54 @@ public:
     }
     return newM;
   }
+
+  void compare(const SparseMatrix<T> &b) {
+    for (int i = 0; i < val.size(); i++) {
+      // cout << "val1: " << val[i] << " val2: " << b.getValElement(i) << endl;
+      if (val[i] != b.getValElement(i))
+        return false;
+    }
+    return true;
+  }
+
+  SparseMatrix<T> multConcurrency(const SparseMatrix<T> &m2) const {
+
+    // Check
+    assert(cols == m2.getNumRows());
+
+    thread_pool *pool = new thread_pool();
+    vector<SparseMatrix<T>> results(rows, {1, m2.getNumCols()});
+    SparseMatrix<T> result(rows, m2.getNumCols());
+
+    auto multCol = [&](int nRow) {
+      SparseMatrix<T> &row = results[nRow];
+      for (int i = 0; i < m2.getNumCols(); i++) {
+        T accum(0);
+        for (int j = rowPtr[nRow]; j < rowPtr[nRow + 1]; j++) {
+          accum += val[j] * m2.get(colInd[j], i);
+        }
+        if (accum == T(0))
+          continue;
+        row.set(accum, 0, i);
+      }
+    };
+
+    for (int i = 0; i < rows; i++) {
+      auto func = [&multCol, i] { multCol(i); };
+      pool->submit(func);
+      // cerr << i << '\n';
+    }
+
+    delete pool;
+
+    for (int i = 0; i < results.size(); i++) {
+      for (int j = 0; j < results[i].getNumCols(); j++) {
+        result.set(results[i].get(0, j), i, j);
+      }
+    }
+
+    return result;
+  }
 };
 
 template <typename T>
@@ -176,13 +244,11 @@ void multCol(const SparseMatrix<T> &m1, const SparseMatrix<T> &m2, int nRow,
 
   for (int i = 0; i < m2.getNumCols(); i++) {
     T accum = T(0);
-    for (int j = m1.getRowPtr()[i]; j < m1.getRowPtr()[i + 1]; j++) {
+    for (int j = m1.getRowPtr()[nRow]; j < m1.getRowPtr()[nRow + 1]; j++) {
       accum += m1.get(nRow, m1.getColInd()[j]) * m2.get(m1.getColInd()[j], i);
     }
     results[nRow].set(accum, 0, i);
   }
-  // cout << "Result:" << endl;
-  // results[nRow].print();
 }
 
 template <typename T>
@@ -218,7 +284,7 @@ void diamondCol(const SparseMatrix<T> &m1, const SparseMatrix<T> &m2, int nRow,
 
   for (int i = 0; i < m1.getNumCols(); i++) {
     T mn = std::numeric_limits<T>::max();
-    for (int j = m1.getRowPtr()[i]; j < m1.getRowPtr()[i + 1]; j++) {
+    for (int j = m1.getRowPtr()[nRow]; j < m1.getRowPtr()[nRow + 1]; j++) {
       mn = std::min(mn, m1.get(nRow, m1.getColInd()[j]) +
                             m2.get(m2.getColInd()[j], i));
     }
@@ -251,14 +317,15 @@ SparseMatrix<T> diamondConcurrency(const SparseMatrix<T> &m1) {
     }
 
     m2 = result;
+    cout << endl;
+    result.print();
   }
 
   return result;
 }
 
 template <typename T>
-SparseMatrix<T> minMatrix(const SparseMatrix<T> &a,
-                          const SparseMatrix<T> &b) {
+SparseMatrix<T> minMatrix(const SparseMatrix<T> &a, const SparseMatrix<T> &b) {
   SparseMatrix<T> result(a.getNumRows(), a.getNumCols());
   for (int i = 0; i < a.getNumRows(); i++) {
     for (int j = 0; j < a.getNumCols(); j++) {

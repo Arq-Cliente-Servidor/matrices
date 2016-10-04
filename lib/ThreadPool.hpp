@@ -1,7 +1,7 @@
 #pragma once
 
-// #include "ThreadSafeQueue.hpp"
-#include "SafeQueue.hpp"
+#include "ThreadSafeQueue.hpp"
+// #include "SafeQueue.hpp"
 #include <atomic>
 #include <iostream>
 #include <thread>
@@ -10,8 +10,8 @@
 class thread_pool {
 private:
   std::atomic_bool done;
-  // threadsafe_queue<std::function<void()>> work_queue;
-  SafeQueue<std::function<void()>> work_queue;
+  threadsafe_queue<std::function<void()>> work_queue;
+  // SafeQueue<std::function<void()>> work_queue;
   std::vector<std::thread> threads;
 
   void worker_thread() {
@@ -31,7 +31,7 @@ public:
     unsigned const thread_count = std::thread::hardware_concurrency();
     try {
       for (unsigned i = 0; i < thread_count; ++i) {
-        threads.emplace_back(std::thread(&thread_pool::worker_thread, this));
+        threads.emplace_back(&thread_pool::worker_thread, this);
       }
     } catch (...) {
       done = true;
@@ -60,8 +60,8 @@ public:
   }
 
   template <typename FunctionType> void submit(FunctionType f) {
-    // work_queue.push(std::function<void()>(f));
     work_queue.emplace(f);
+    // work_queue.emplace(f);
     //    std::cerr << std::this_thread::get_id() << std::endl;
   }
 };

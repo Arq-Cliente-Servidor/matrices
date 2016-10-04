@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
   std::cout << "    Number of arcs: " << num_arcs << std::endl;
 
   std::cout << std::endl;
+  std::cout << std::fixed;
 
   std::cout << "Sorting to speed up loading... " << std::flush;
   std::sort(data.begin(), data.end(),
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Loading Matrix... " << std::flush;
   auto start = std::chrono::high_resolution_clock::now();
 
-  SparseMatrix<float> mat(num_nodes, num_nodes);
+  SparseMatrix<int> mat(num_nodes, num_nodes);
   for (auto &arc : data) {
     mat.set(std::get<2>(arc), std::get<0>(arc), std::get<1>(arc));
   }
@@ -94,12 +95,29 @@ int main(int argc, char *argv[]) {
   // hacer cosas
   std::cout << "Init mult..." << std::endl;
   start = std::chrono::high_resolution_clock::now();
-  SparseMatrix<float> result = multConcurrency(mat, mat);
+  SparseMatrix<int> result = mat.multConcurrency(mat);
   end = std::chrono::high_resolution_clock::now();
   elapsed =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
   std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
             << std::endl;
 
+  // SparseMatrix<int> r = mat.mult(mat);
+  // result.print();
+  // cout << r.getValElement(0) << endl;
+  // for (int i = 0; i < result.getVal().size(); i++) {
+  //   cout << "val1: " << result.getValElement(i)
+  //        << " val2: " << r.getValElement(i) << endl;
+  //   // if (val[i] != b.getValElement(i))
+  //   // return false;
+  // }
+  // if (result.compare(r))
+  //   cout << "Buen calculo! :D" << endl;
+  // else
+  //   cout << "Mal calculo! :(";
+  // result.print();
+  // cout << endl;
+  // r.print();
+  // mat.print();
   return 0;
 }

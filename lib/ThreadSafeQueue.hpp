@@ -18,12 +18,19 @@ public:
     data_cond.notify_one();
   }
 
+  template <class... Args> T &emplace(Args &&... args) {
+    std::lock_guard<std::mutex> lk(mut);
+    data_queue.emplace(args...);
+    return data_queue.back();
+  }
+
   void wait_and_pop(T &value) {
     std::unique_lock<std::mutex> lk(mut);
     data_cond.wait(lk, [this] { return !data_queue.empty(); });
     value = std::move(data_queue.front());
     data_queue.pop();
   }
+
   std::shared_ptr<T> wait_and_pop() {
     std::unique_lock<std::mutex> lk(mut);
     data_cond.wait(lk, [this] { return !data_queue.empty(); });
@@ -41,6 +48,7 @@ public:
     data_queue.pop();
     return true;
   }
+
   std::shared_ptr<T> try_pop() {
     std::lock_guard<std::mutex> lk(mut);
     if (data_queue.empty())
