@@ -53,7 +53,7 @@ int main() {
   // result.print();
 
   start = std::chrono::high_resolution_clock::now();
-  SparseMatrix<int> result = m.diamond();
+  SparseMatrix<int> result = m.diamondConcurrency();
 
   // result.print(m.getNumRows(), m.getNumCols());
   end = std::chrono::high_resolution_clock::now();
