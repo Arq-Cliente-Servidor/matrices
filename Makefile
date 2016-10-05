@@ -18,4 +18,4 @@ example: examples/example.cc
 	$(CC) -o examples/example examples/example.cc -pthread
 
 clean:
-	rm -rf matrix test examples/example thread_pool
+	rm -rf matrix test examples/example thread_pool dataset tp
