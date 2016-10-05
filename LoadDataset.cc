@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   // hacer cosas
   std::cout << "Init mult..." << std::endl;
   start = std::chrono::high_resolution_clock::now();
-  SparseMatrix<int> result = mat.multConcurrency(mat);
+  SparseMatrix<int> result = mat.diamondConcurrency();
   end = std::chrono::high_resolution_clock::now();
   elapsed =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);

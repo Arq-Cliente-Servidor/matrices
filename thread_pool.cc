@@ -53,7 +53,9 @@ int main() {
   // result.print();
 
   start = std::chrono::high_resolution_clock::now();
+  // SparseMatrix<int> m2 = m.check();
   SparseMatrix<int> result = m.diamondConcurrency();
+  // SparseMatrix<int> result2 = m2.diamond_block_seq(result);
 
   // result.print(m.getNumRows(), m.getNumCols());
   end = std::chrono::high_resolution_clock::now();
@@ -62,12 +64,8 @@ int main() {
   std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
             << std::endl;
 
-  result.print();
-  // SparseMatrix<int> r = m.mult(m);
-  // if (result.compare(r))
-  //   cout << "Buen calculo! :D" << endl;
-  // else
-  //   cout << "Mal calculo! :(";
+  result.print(m.getNumRows(), m.getNumCols());
+  // result2.print(m.getNumRows(), m.getNumCols());
 
   // m4 * m4
   // 30 36 42
