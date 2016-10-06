@@ -2,6 +2,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <tuple>
 
@@ -33,7 +34,7 @@ int main(int argc, char *argv[]) {
 
   size_t num_nodes = 0;
   size_t num_arcs = 0;
-  std::vector<Arc<float>> data;
+  std::set<Arc<float>> data;
 
   while (std::getline(dataset_file, line)) {
     std::stringstream stream(line);
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
       size_t i, j;
       float value;
       stream >> i >> j >> value;
-      data.emplace_back(i - 1, j - 1, value);
+      data.emplace(i - 1, j - 1, value);
     }
   }
 
@@ -59,48 +60,35 @@ int main(int argc, char *argv[]) {
 
   std::cout << "DATASET INFORMATION" << std::endl;
   std::cout << "    Number of nodes: " << num_nodes << std::endl;
-  std::cout << "    Number of arcs: " << num_arcs << std::endl;
+  std::cout << "    Number of arcs: " << data.size() << std::endl;
 
   std::cout << std::endl;
   std::cout << std::fixed;
 
-  std::cout << "Sorting to speed up loading... " << std::flush;
-  std::sort(data.begin(), data.end(),
-            [](const Arc<float> &t1, const Arc<float> &t2) -> bool {
-              if (std::get<0>(t1) < std::get<0>(t2)) {
-                return true;
-              } else if (std::get<0>(t1) == std::get<0>(t2) &&
-                         std::get<1>(t1) < std::get<1>(t2)) {
-                return true;
-              } else {
-                return false;
-              };
-            });
   std::cout << "Done." << std::endl;
-
   std::cout << "Loading Matrix... " << std::flush;
-  auto start = std::chrono::high_resolution_clock::now();
-
-  SparseMatrix<int> mat(num_nodes, num_nodes);
-  for (auto &arc : data) {
-    mat.set(std::get<2>(arc), std::get<0>(arc), std::get<1>(arc));
-  }
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
-            << std::endl;
+  // auto start = std::chrono::high_resolution_clock::now();
+  //
+  // SparseMatrix<int> mat(num_nodes, num_nodes);
+  // for (auto &arc : data) {
+  //   mat.set(std::get<2>(arc), std::get<0>(arc), std::get<1>(arc));
+  // }
+  //
+  // auto end = std::chrono::high_resolution_clock::now();
+  // auto elapsed =
+  //     std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  // std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+  //           << std::endl;
 
   // hacer cosas
-  std::cout << "Init mult..." << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  SparseMatrix<int> result = mat.diamondConcurrency();
-  end = std::chrono::high_resolution_clock::now();
-  elapsed =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
-            << std::endl;
+  // std::cout << "Init mult..." << std::endl;
+  // start = std::chrono::high_resolution_clock::now();
+  // SparseMatrix<int> result = mat.diamondConcurrency();
+  // end = std::chrono::high_resolution_clock::now();
+  // elapsed =
+  //     std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  // std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
+  //           << std::endl;
 
   // SparseMatrix<int> r = mat.mult(mat);
   // result.print();

@@ -245,6 +245,7 @@ public:
     vector<SparseMatrix<T>> results(rows, {1, m2.getNumCols()});
     SparseMatrix<T> result(rows, m2.getNumCols());
     thread_pool *pool;
+    // int exp = rows - 1;
 
     auto diamondCol = [&](int nRow) {
       for (int i = 0; i < cols; i++) {
@@ -288,7 +289,7 @@ public:
     return result;
   }
 
-  SparseMatrix<T> diamond_block_seq(const SparseMatrix<T> &m) const {
+  SparseMatrix<T> diamond_block_seq(SparseMatrix<T> &m) const {
     if (rows == 2) {
       return diamondSeq(m);
     } else {
@@ -324,5 +325,22 @@ public:
 
       return result;
     }
+  }
+
+  SparseMatrix<T> diamond_block_seq_complete() const {
+    // this = check();
+    SparseMatrix<T> m2(*this);
+    SparseMatrix<T> result(rows, cols);
+    int exp = rows - 2;
+
+    while (exp) {
+      if (exp & 1) {
+        result = diamond_block_seq(m2);
+      }
+      m2 = diamond_block_seq(m2);
+      exp >>= 1;
+    }
+
+    return result;
   }
 };
