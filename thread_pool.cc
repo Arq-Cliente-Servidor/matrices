@@ -1,4 +1,4 @@
-#include "lib/SparseMatrix.hpp"
+#include "lib/SparseMatrix2.hpp"
 #include "lib/ThreadPool.hpp"
 #include <chrono>
 #include <fstream>

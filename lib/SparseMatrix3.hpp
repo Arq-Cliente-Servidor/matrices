@@ -1,4 +1,6 @@
-#include "lib/ThreadPool.hpp"
+#pragma once
+
+#include "ThreadPool.hpp"
 #include <armadillo>
 #include <cassert>
 #include <cmath>
@@ -172,7 +174,8 @@ arma::SpMat<T> multConcurrency(const arma::SpMat<T> &m1,
       for (int j = 0; j < m1.n_cols; j++) {
         accum += m1(j, i) * m2(nRow, j);
       }
-      if (accum == T(0)) continue;
+      if (accum == T(0))
+        continue;
       rowVal(0, i) = accum;
     }
     // for (auto it = m1.begin(); it != m1.end(); ++it) {
@@ -206,71 +209,4 @@ arma::SpMat<T> multConcurrency(const arma::SpMat<T> &m1,
   // cout << endl;
 
   return result;
-}
-
-template <typename T> void print(arma::SpMat<T> m) {
-  for (int i = 0; i < m.n_rows; i++) {
-    for (int j = 0; j < m.n_cols; j++) {
-      if (j)
-        cout << " ";
-      cout << m(i, j);
-    }
-    cout << endl;
-  }
-}
-
-// begin1 -> referencia a las filas
-// begin2 -> referencia a las columnas
-
-int main() {
-  cout << fixed;
-  arma::SpMat<int> m(3, 3);
-  m(0, 0) = 1;
-  m(0, 1) = 2;
-  m(0, 2) = 0;
-  m(1, 0) = 4;
-  m(1, 1) = 5;
-  m(1, 2) = 6;
-  m(2, 0) = 7;
-  m(2, 1) = 8;
-  m(2, 2) = 9;
-  // cout << m << endl;
-  arma::SpMat<int> r = multConcurrency(m, m);
-  print(r);
-  // cout << r << endl;
-
-  // for (auto it = m.begin_row(1); it != m.end_row(1); ++it) {
-  //   cout << it.row() << " " << it.col() << endl;
-  // }
-
-  // cout << m.row << endl;
-  // arma::SpSubview<double> s = m.rows(0, 0);
-  // cout << s.n_rows << ", " << s.n_cols << endl;
-  // SparseMatrix<int> m(3, 3);
-  // m.setData({1, 2, 0, 4, 5, 6, 7, 8, 9});
-  // SparseMatrix<int> r = m.multConcurrency(m);
-  // r.print();
-
-  // int len = sizeof(mem) / sizeof(mem[0]);
-  // for (int i = 0; i < len; i++) {
-  //   cout << mem[i] << " ";
-  // }
-  // cout << endl;
-
-  // auto r = m.rows(0, 0);
-  // for (auto it = m.begin_col(0); it != m.end_col(0); ++it) {
-  //   cout << it.row() << "," << it.col() << endl;
-  // }
-  // cout << endl;
-  // m.row
-  // arma::SpMat<int> result = m * m;
-  // cout << r(1, 1) << endl;
-  // SparseMatrix<int> m(3, 3);
-  // m.setData({1, 2, 3, 4, 5, 6, 7, 8, 9});
-  // m.print();
-
-  // SparseMatrix<int> result = m.multConcurrency(m);
-  // result.print();
-
-  return 0;
 }
