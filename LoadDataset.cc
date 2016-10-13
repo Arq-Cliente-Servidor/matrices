@@ -106,7 +106,8 @@ int main(int argc, char *argv[]) {
   // cout << mat << endl;
   // SparseMatrix<double> result = mat.multConcurrent(mat);
   // cout << result << endl;
-  SparseMatrix<double> result = mat.diamondConcurrent();
+  std::cout << "Rows Zeros: " << mat.countRowsZeros() << std::endl;
+  // SparseMatrix<double> result = mat.diamondConcurrent();
   // arma::SpMat<double> result2 = m2 * m2;
   end = std::chrono::high_resolution_clock::now();
   elapsed =

@@ -75,6 +75,14 @@ public:
     return false;
   }
 
+  size_t countRowsZeros() {
+    size_t count = 0;
+    for (size_t i = 0; i < rows; i++) {
+      count += (vals[i].size() == 0);
+    }
+    return count;
+  }
+
   // sequential operations
   SparseMatrix<T> operator*(const SparseMatrix<T> &other) {
     assert(cols == other.getNumRows());
@@ -110,7 +118,7 @@ public:
         for (size_t j = 0; j < other.getNumCols(); j++) {
           T mn = oo;
           for (size_t k = 0; k < cols; k++) {
-            if (get(k, j) == T(0) || other.get(i, k) == T(0))
+            if (get(k, j) == T(0) && other.get(i, k) == T(0))
               continue;
             mn = min(mn, get(k, j) + other.get(i, k));
           }
@@ -144,6 +152,7 @@ public:
     SparseMatrix<T> result(rows, m2.getNumCols());
 
     auto multRow = [&](size_t nRow) {
+      // get row
       const auto &row = m2(nRow);
       for (int i = 0; i < rows; i++) {
         T accum(0);
@@ -188,7 +197,139 @@ public:
     }
   }
 
-  void diamond_block(SparseMatrix<T> &m) const {}
+  SparseMatrix<T> diamondSeq(const SparseMatrix<T> &b) const {
+    assert(cols == b.getNumRows());
+    SparseMatrix<T> result(rows, b.getNumCols());
+
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < b.getNumCols(); j++) {
+        T mn = numeric_limits<T>::max();
+        for (int k = 0; k < cols; k++) {
+          if (get(i, k) == T(0) && b.get(k, j) == T(0))
+            continue;
+          // else if (get(i, k) != T(0) && && b.get(k, j) == T(0))
+          mn = min(mn, get(i, k) + b.get(k, j));
+        }
+        result.set(mn, i, j);
+      }
+    }
+    return result;
+  }
+
+  SparseMatrix<T> minMatrix(const SparseMatrix<T> &b) const {
+    SparseMatrix<T> result(rows, cols);
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        result.set(min(get(i, j), b.get(i, j)), i, j);
+      }
+    }
+    return result;
+  }
+
+  SparseMatrix<T> diamond_block_seq(SparseMatrix<T> &m) const {
+    if (rows == 2) {
+      // cout << m << endl;
+      return diamondSeq(m);
+    } else {
+      size_t sizeA = rows / 2;
+      size_t sizeB = m.getNumRows() / 2;
+
+      SparseMatrix<T> a0 = partition(0, 0);
+      SparseMatrix<T> a1 = partition(0, sizeA);
+      SparseMatrix<T> a2 = partition(sizeA, 0);
+      SparseMatrix<T> a3 = partition(sizeA, sizeA);
+
+      SparseMatrix<T> b0 = m.partition(0, 0);
+      SparseMatrix<T> b1 = m.partition(0, sizeB);
+      SparseMatrix<T> b2 = m.partition(sizeB, 0);
+      SparseMatrix<T> b3 = m.partition(sizeB, sizeB);
+
+      SparseMatrix<T> r0 =
+          (a0.diamond_block_seq(b0)).minMatrix(a1.diamond_block_seq(b2));
+      SparseMatrix<T> r1 =
+          (a0.diamond_block_seq(b1)).minMatrix(a1.diamond_block_seq(b3));
+      SparseMatrix<T> r2 =
+          (a2.diamond_block_seq(b0)).minMatrix(a3.diamond_block_seq(b2));
+      SparseMatrix<T> r3 =
+          (a2.diamond_block_seq(b1)).minMatrix(a3.diamond_block_seq(b3));
+
+      SparseMatrix<T> result(rows, cols);
+      size_t sizeResult = result.getNumRows() / 2;
+
+      r0.rebuild(result, 0, 0);
+      r1.rebuild(result, 0, sizeResult);
+      r2.rebuild(result, sizeResult, 0);
+      r3.rebuild(result, sizeResult, sizeResult);
+
+      return result;
+    }
+  }
+
+  SparseMatrix<T> addMatrix(const SparseMatrix<T> &b) {
+    SparseMatrix<T> c(rows, cols);
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        c.set(get(i, j) + b.get(i, j), i, j);
+      }
+    }
+
+    return c;
+  }
+
+  SparseMatrix<T> multMatrix(const SparseMatrix<T> &m2) {
+    SparseMatrix<T> result(rows, m2.getNumCols());
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < m2.getNumCols(); j++) {
+        T accum(0);
+        for (size_t k = 0; k < cols; k++) {
+          if (get(i, k) == T(0) || m2.get(k, j) == T(0))
+            continue;
+          accum += get(i, k) * m2.get(k, j);
+        }
+        result.set(accum, i, j);
+      }
+    }
+
+    return result;
+  }
+
+  SparseMatrix<T> mult_block_seq(const SparseMatrix<T> &m) {
+    if (rows == 2) {
+      return multMatrix(m);
+    } else {
+      size_t sizeA = rows / 2;
+      size_t sizeB = m.getNumRows() / 2;
+
+      SparseMatrix<T> a0 = partition(0, 0);
+      SparseMatrix<T> a1 = partition(0, sizeA);
+      SparseMatrix<T> a2 = partition(sizeA, 0);
+      SparseMatrix<T> a3 = partition(sizeA, sizeA);
+
+      SparseMatrix<T> b0 = m.partition(0, 0);
+      SparseMatrix<T> b1 = m.partition(0, sizeB);
+      SparseMatrix<T> b2 = m.partition(sizeB, 0);
+      SparseMatrix<T> b3 = m.partition(sizeB, sizeB);
+
+      SparseMatrix<T> r0 =
+          (a0.mult_block_seq(b0)).addMatrix(a1.mult_block_seq(b2));
+      SparseMatrix<T> r1 =
+          (a0.mult_block_seq(b1)).addMatrix(a1.mult_block_seq(b3));
+      SparseMatrix<T> r2 =
+          (a2.mult_block_seq(b0)).addMatrix(a3.mult_block_seq(b2));
+      SparseMatrix<T> r3 =
+          (a2.mult_block_seq(b1)).addMatrix(a3.mult_block_seq(b3));
+
+      SparseMatrix<T> result(rows, cols);
+      size_t sizeResult = result.getNumRows() / 2;
+
+      r0.rebuild(result, 0, 0);
+      r1.rebuild(result, 0, sizeResult);
+      r2.rebuild(result, sizeResult, 0);
+      r3.rebuild(result, sizeResult, sizeResult);
+
+      return result;
+    }
+  }
 
   SparseMatrix<T> diamondConcurrent() const {
     SparseMatrix<T> m2(*this);
@@ -206,10 +347,10 @@ public:
         T mn = oo;
         for (const auto &it : row) {
           T tmp = get(it.first, i);
-          if (tmp == T(0) || it.second == T(0))
-            mn = min(mn, oo);
-          else
-            mn = min(mn, tmp + it.second);
+          if (tmp == T(0) && it.second == T(0))
+            continue;
+          // mn = min(mn, oo);
+          mn = min(mn, tmp + it.second);
         }
         if (mn == oo || mn == 0)
           continue;
@@ -238,7 +379,7 @@ public:
     //   m2 = diamond_once(m2);
     //   exp >>= 1;
     // }
-    result = diamond_once(m2);
+    // result = diamond_once(m2);
     return result;
   }
 
