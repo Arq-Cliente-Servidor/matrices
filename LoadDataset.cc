@@ -106,8 +106,9 @@ int main(int argc, char *argv[]) {
   // cout << mat << endl;
   // SparseMatrix<double> result = mat.multConcurrent(mat);
   // cout << result << endl;
-  std::cout << "Rows Zeros: " << mat.countRowsZeros() << std::endl;
-  // SparseMatrix<double> result = mat.diamondConcurrent();
+  // std::cout << "Rows Zeros: " << mat.countRowsZeros() << std::endl;
+  SparseMatrix<double> result = mat.multConcurrent(mat);
+  SparseMatrix<double> result2 = mat * mat; //.diamondConcurrent();
   // arma::SpMat<double> result2 = m2 * m2;
   end = std::chrono::high_resolution_clock::now();
   elapsed =
@@ -115,11 +116,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
             << std::endl;
 
-  // if (compare(result, result2)) {
-  //   std::cout << "Buen calculo! :D\n";
-  // } else {
-  //   std::cout << "Mal calculo! :(\n";
-  // }
+  if (result.compare(result)) {
+    std::cout << "Buen calculo! :D\n";
+  } else {
+    std::cout << "Mal calculo! :(\n";
+  }
 
   return 0;
 }
