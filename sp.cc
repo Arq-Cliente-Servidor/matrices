@@ -6,7 +6,7 @@ using namespace std;
 
 int main() {
   SparseMatrix<int> m(3, 3);
-  m.setData({1, 2, 0, 4, 5, 6, 7, 8, 9});
+  m.setData({1, 2, 3, 4, 5, 6, 7, 8, 9});
   // m.setData({0, 2, 0, 2, 0, 6, 0, 6, 0});
 
   SparseMatrix<int> m2(3, 3);
@@ -18,9 +18,9 @@ int main() {
   //   m.resize(nSize, nSize);
   //   m2.resize(nSize, nSize);
   // }
-  SparseMatrix<int> r = m * m; // m.mult_block_seq(m);
-  SparseMatrix<int> r2 = m.multConcurrent(m);
-  cout << r.compare(r2) << endl;
+  SparseMatrix<int> r = m.fifo(); // m.mult_block_seq(m);
+  // SparseMatrix<int> r2 = m.multConcurrent(m);
+  cout << r << endl;
   // cout << r << endl;
 
   // [2, 3, 1]

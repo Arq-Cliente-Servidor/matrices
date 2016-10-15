@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <armadillo>
+// #include <armadillo>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
   // SparseMatrix<double> result = mat.multConcurrent(mat);
   // cout << result << endl;
   // std::cout << "Rows Zeros: " << mat.countRowsZeros() << std::endl;
-  SparseMatrix<double> result = mat.multConcurrent(mat);
-  SparseMatrix<double> result2 = mat * mat; //.diamondConcurrent();
+  // SparseMatrix<double> result = mat.diamond(;
+  SparseMatrix<double> result2 = mat.diamond();
   // arma::SpMat<double> result2 = m2 * m2;
   end = std::chrono::high_resolution_clock::now();
   elapsed =
@@ -116,11 +116,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
             << std::endl;
 
-  if (result.compare(result)) {
-    std::cout << "Buen calculo! :D\n";
-  } else {
-    std::cout << "Mal calculo! :(\n";
-  }
+  // if (result.compare(result)) {
+  //   std::cout << "Buen calculo! :D\n";
+  // } else {
+  //   std::cout << "Mal calculo! :(\n";
+  // }
 
   return 0;
 }

@@ -39,7 +39,7 @@ public:
       assert(v->second != T(0));
       return v->second;
     }
-    return T(0);
+    return T();
   }
 
   // get row
@@ -58,9 +58,9 @@ public:
     if (value != T(0)) {
       // cerr << "r " << r << " c " << c << endl;
       vals[r][c] = value;
-    } else {
-      vals[r].erase(c);
-    }
+    } // else {
+    // vals[r].erase(c);
+    // }
   }
 
   bool setData(const vector<T> &other) {
@@ -89,27 +89,13 @@ public:
     SparseMatrix<T> result(rows, other.getNumCols());
 
     for (size_t i = 0; i < rows; i++) {
-      // for (size_t j = 0; j < other.getNumCols(); j++) {
       const auto &row = vals[i];
       for (const auto &j : row) {
-        const auto &row = other(j.first);
-        T accum(0);
-        // for (size_t k = 0; k < cols; k++) {
-        for (const auto &k : row) {
-          // cout << k.second << " * " << j.second
-          //      << endl; //" * " << vals[j.first][k.first] << endl;
+        const auto &othRow = other(j.first);
+        for (const auto &k : othRow) {
           result.set(result.get(i, k.first) + (k.second * j.second), i,
                      k.first);
-          // i,
-          //            k.first);
-          // if (get(k, j) == T(0) || other.get(i, k) == T(0))
-          // continue;
-          // accum += get(k, j) * other.get(i, k);
         }
-        // cout << endl;
-        // if (accum == T(0))
-        // continue;
-        // result.set(accum, i, j);
       }
     }
 
@@ -131,22 +117,27 @@ public:
     SparseMatrix<T> other(*this);
     assert(cols == other.getNumRows());
     SparseMatrix<T> result(rows, other.getNumCols());
-    T oo(numeric_limits<T>::max());
     size_t exp = rows - 1;
 
-    auto diamond_once = [&](SparseMatrix<T> m) {
+    auto diamond_once = [&](const SparseMatrix<T> &m) {
       SparseMatrix<T> result(rows, m.getNumCols());
+      T oo(numeric_limits<T>::max());
       for (size_t i = 0; i < rows; i++) {
-        for (size_t j = 0; j < other.getNumCols(); j++) {
-          T mn = oo;
-          for (size_t k = 0; k < cols; k++) {
-            if (get(k, j) == T(0) || other.get(i, k) == T(0))
-              continue;
-            mn = min(mn, get(k, j) + other.get(i, k));
+        const auto &row = vals[i];
+        for (const auto &j : row) {
+          const auto &othRow = m(j.first);
+          for (const auto &k : othRow) {
+            // if (!ok) {
+            //   result.set(k.second + j.second, i, k.first);
+            //   ok = true;
+            // }
+            if (result.get(i, k.first) == T(0)) {
+              result.set(min(k.second + j.second), i, k.first);
+            } else {
+              result.set(min(result.get(i, k.first), k.second + j.second), i,
+                         k.first);
+            }
           }
-          if (mn == oo)
-            continue;
-          result.set(mn, i, j);
         }
       }
       return result;
@@ -156,9 +147,11 @@ public:
     while (exp) {
       if (exp & 1) {
         result = diamond_once(other);
+        exp = (exp - 1) >> 1;
+      } else {
+        other = diamond_once(other);
+        exp >>= 1;
       }
-      other = diamond_once(other);
-      exp >>= 1;
     }
 
     return result;
@@ -175,19 +168,13 @@ public:
 
     auto multRow = [&](size_t nRow) {
       // get row
-      const auto &row = m2(nRow);
-      for (int i = 0; i < rows; i++) {
-        T accum(0);
-
-        for (const auto &it : row) {
-          T tmp = get(it.first, i);
-          if (tmp == T(0) || it.second == T(0))
-            continue;
-          accum += tmp * it.second;
+      const auto &row = vals[nRow];
+      for (const auto &j : row) {
+        const auto &othRow = m2(j.first);
+        for (const auto &it : othRow) {
+          result.set(result.get(nRow, it.first) + (it.second * j.second), nRow,
+                     it.first);
         }
-        if (accum == T(0))
-          continue;
-        result.set(accum, nRow, i);
       }
     };
 
@@ -371,21 +358,18 @@ public:
 
     auto diamondRow = [&](size_t nRow, const SparseMatrix<T> &m,
                           SparseMatrix<T> &result) {
-      auto &row = m(nRow);
+      auto &row = vals[nRow];
       T oo(numeric_limits<T>::max());
 
-      for (size_t i = 0; i < rows; i++) {
-        T mn = oo;
-        for (const auto &it : row) {
-          T tmp = get(it.first, i);
-          if (tmp == T(0))
-            continue;
-          // mn = min(mn, oo);
-          mn = min(mn, tmp + it.second);
+      for (const auto &i : row) {
+        const auto &othRow = m(i.first);
+        for (const auto &it : othRow) {
+          if (result.get(nRow, it.first) == 0) {
+            result.set(it.second + i.second, nRow, it.first);
+          }
+          result.set(min(result.get(nRow, it.first), it.second + i.second),
+                     nRow, it.first);
         }
-        if (mn == oo)
-          continue;
-        result.set(mn, nRow, i);
       }
     };
 
