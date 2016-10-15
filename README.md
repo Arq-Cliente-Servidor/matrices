@@ -1,1 +1,1 @@
-# Multiplication  and A Diamond of Sparce Matrix
+# Multiplication  and A Diamond of Sparse Matrix
