@@ -1,110 +1,26 @@
+#include "lib/SparseMatrix.hpp"
+#include <cmath>
 #include <iostream>
-#include <limits>
-#include <queue>
-#include <thread>
-
-#include "lib/Matrix.hpp"
 
 using namespace std;
 
-struct Edge {
-  int to;
-  int weight;
-  Edge() {}
-  Edge(int t, int w) : to(t), weight(w) {}
-  bool operator < (const Edge &e) const {
-    return weight > e.weight;
-  }
-};
+int main() {
+  SparseMatrix<int> m(3, 3);
+  m.setData({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  // m.setData({0, 2, 0, 2, 0, 6, 0, 6, 0});
 
-typedef vector<vector<Edge>> Graph;
+  SparseMatrix<int> m2(3, 3);
+  m2.setData({2, 3, 8, 5, 6, 11, 8, 9, 14});
+  // m2.setData({2, 3, 4, 5, 6, 7, 8, 9, 10});
 
-int dijkstra(int s, int t, Graph &g, vector<int> &d) {
-  priority_queue<Edge> pq;
-  d[s] = 0;
-  pq.push(Edge(s, 0));
-
-  while (!pq.empty()) {
-    int curr = pq.top().to;
-    int weight = pq.top().weight;
-    pq.pop();
-
-    if (weight > d[curr]) continue;
-    if (curr == t) {
-      return weight;
-    }
-
-    for (int i = 0; i < g[curr].size(); i++) {
-      int to = g[curr][i].to;
-      int weight_extra = g[curr][i].weight;
-      if (weight + weight_extra < d[to]) {
-        d[to] = weight + weight_extra;
-        pq.push(Edge(to, d[to]));
-      }
-    }
-  }
-
-  return numeric_limits<int>::max();
-}
-
-vector<int> multCol(vector<vector<int>> &m, vector<int> &col) {
-  vector<int> result(col.size());
-  for (int i = 0; i < m.size(); i++) {
-    for (int j = 0; j < m[i].size(); j++) {
-      result[i] += m[i][j] * col[j];
-    }
-  }
-  return result;
-}
-
-vector<int> getCol(vector<vector<int>> &m, int numCol) {
-  vector<int> col;
-  for (int i = 0; i < m.size(); i++) {
-    col.push_back(m[i][numCol]);
-  }
-  return col;
-}
-
-int main(int argc, char const *argv[]) {
-  // Matrix m1 = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  // Matrix m2 = {{2, 0, 1}, {3, 0, 0}, {5, 1, 1}};
-  // Matrix m3 = {{1, 0, 1}, {1, 2, 1}, {1, 1, 0}};
-
-  // multConcurrency(m2, m3);
-  // multConcurrency(m2, m2);
-  // Matrix mc = m1;
-  // diamondConcurrency(m1, mc);
-  // diamondConcurrency(m1, m3);
-
-  // m2 X m3 = [[3 1 2]]
-  //            [3 0 3]
-  //            [7 3 6]
-  //
-  // m1 <> m1 (n -1 veces) =
-  //            [[3 4 5]]
-  //             [6 7 8]
-  //             [9 10 11]
-
-  vector<vector<int>> m = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  Matrix<int> mat(m);
-  cout << mat << endl;
-
-  int nodes, edges, a, b, w, s, t;
-  cin >> nodes >> edges;
-
-  Graph g(nodes);
-  vector<int> d(nodes, numeric_limits<int>::max());
-
-  for (int i = 0; i < edges; i++) {
-    cin >> a >> b >> w;
-    g[a - 1].push_back(Edge(b - 1, w));
-  }
-
-  cin >> s >> t;
-  int ans = dijkstra(s - 1, t - 1, g, d);
-
-  if (ans ==  numeric_limits<int>::max()) cout << "Impossible" << endl;
-  else cout << ans << endl;
-
+  // size_t nSize = pow(2, ceil(log2(double(m.getNumRows()))));
+  // if (m.getNumRows() != nSize) {
+  //   m.resize(nSize, nSize);
+  //   m2.resize(nSize, nSize);
+  // }
+  SparseMatrix<int> r = m.diamondConcurrent(); // m.mult_block_seq(m);
+  // SparseMatrix<int> r2 = m.multConcurrent(m);
+  cout << r << endl;
+  // cout << r << endl;
   return 0;
 }

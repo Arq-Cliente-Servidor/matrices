@@ -17,13 +17,13 @@ private:
   vector<map<size_t, T>> vals;
 
 public:
-  SparseMatrix() : rows(0), cols(0), vals(0) {}
+  SparseMatrix() : rows(0), cols(0), vals() {}
   SparseMatrix(size_t r, size_t c) : rows(r), cols(c), vals(r) {}
-  SparseMatrix(const SparseMatrix<T> &) = default;
-  SparseMatrix(SparseMatrix<T> &&) = default;
-
-  SparseMatrix<T> &operator=(const SparseMatrix<T> &other) = default;
-  SparseMatrix<T> &operator=(SparseMatrix &&other) = default;
+  // SparseMatrix(const SparseMatrix<T> &) = default;
+  // SparseMatrix(SparseMatrix<T> &&) = default;
+  //
+  // SparseMatrix<T> &operator=(const SparseMatrix<T> &other) = default;
+  // SparseMatrix<T> &operator=(SparseMatrix &&other) = default;
 
   // getters
   size_t getNumRows() const { return rows; }
@@ -39,7 +39,7 @@ public:
       assert(v->second != T(0));
       return v->second;
     }
-    return T();
+    return T(0);
   }
 
   // get row
@@ -53,14 +53,14 @@ public:
   }
 
   void set(T value, size_t r, size_t c) {
-    assert(r >= 0 && r <= rows);
-    assert(c >= 0 && c <= cols);
+    assert(r >= 0 && r < rows);
+    assert(c >= 0 && c < cols);
     if (value != T(0)) {
-      // cerr << "r " << r << " c " << c << endl;
       vals[r][c] = value;
-    } // else {
-    // vals[r].erase(c);
-    // }
+    } else {
+      if (vals[r].count(c))
+        vals[r].erase(c);
+    }
   }
 
   bool setData(const vector<T> &other) {
@@ -121,21 +121,16 @@ public:
 
     auto diamond_once = [&](const SparseMatrix<T> &m) {
       SparseMatrix<T> result(rows, m.getNumCols());
-      T oo(numeric_limits<T>::max());
       for (size_t i = 0; i < rows; i++) {
         const auto &row = vals[i];
         for (const auto &j : row) {
           const auto &othRow = m(j.first);
           for (const auto &k : othRow) {
-            // if (!ok) {
-            //   result.set(k.second + j.second, i, k.first);
-            //   ok = true;
-            // }
             if (result.get(i, k.first) == T(0)) {
-              result.set(min(k.second + j.second), i, k.first);
+              result.set(k.second + j.second, i, k.first);
             } else {
-              result.set(min(result.get(i, k.first), k.second + j.second), i,
-                         k.first);
+              T aux = min(result.get(i, k.first), k.second + j.second);
+              result.set(aux, i, k.first);
             }
           }
         }
@@ -147,11 +142,9 @@ public:
     while (exp) {
       if (exp & 1) {
         result = diamond_once(other);
-        exp = (exp - 1) >> 1;
-      } else {
-        other = diamond_once(other);
-        exp >>= 1;
       }
+      other = diamond_once(other);
+      exp >>= 1;
     }
 
     return result;

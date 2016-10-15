@@ -1,5 +1,4 @@
 #include <algorithm>
-// #include <armadillo>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -17,19 +16,6 @@ inline bool FileExists(const std::string &name) {
 }
 
 inline void CreateFile(const std::string &name) { std::ofstream outfile(name); }
-
-// template <typename T> bool compare(SparseMatrix<T> &a, arma::SpMat<T> &b) {
-//   // size_t begin, size_t end) {
-//   for (size_t i = 0; i < a.getNumRows(); i++) {
-//     for (size_t j = 0; j < a.getNumCols(); j++) {
-//       // if (a.get(i, j) != 0)
-//       //   cout << a.get(i, j) << endl;
-//       if (a.get(i, j) != b(i, j))
-//         return false;
-//     }
-//   }
-//   return true;
-// }
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
@@ -71,9 +57,6 @@ int main(int argc, char *argv[]) {
 
   dataset_file.close();
   num_arcs = data.size();
-  // arma::umat locations(2, num_arcs);
-  // arma::vec vals(num_arcs);
-  // size_t cont = 0;
 
   std::cout << "DATASET INFORMATION" << std::endl;
   std::cout << "    Number of nodes: " << num_nodes << std::endl;
@@ -89,12 +72,8 @@ int main(int argc, char *argv[]) {
   SparseMatrix<double> mat(num_nodes, num_nodes);
   for (auto &arc : data) {
     mat.set(std::get<2>(arc), std::get<0>(arc), std::get<1>(arc));
-    // locations(0, cont) = std::get<0>(arc);
-    // locations(1, cont) = std::get<1>(arc);
-    // vals(cont) = std::get<2>(arc);
   }
 
-  // arma::SpMat<double> m2(locations, vals, num_nodes, num_nodes);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
@@ -103,24 +82,14 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Init mult..." << std::endl;
   start = std::chrono::high_resolution_clock::now();
-  // cout << mat << endl;
-  // SparseMatrix<double> result = mat.multConcurrent(mat);
-  // cout << result << endl;
-  // std::cout << "Rows Zeros: " << mat.countRowsZeros() << std::endl;
-  // SparseMatrix<double> result = mat.diamond(;
-  SparseMatrix<double> result2 = mat.diamond();
-  // arma::SpMat<double> result2 = m2 * m2;
+  SparseMatrix<double> result = mat.diamondConcurrent();
+  // SparseMatrix<double> result2 = mat.diamond();
+  // SparseMatrix<double> result3 = mat * mat;
   end = std::chrono::high_resolution_clock::now();
   elapsed =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
   std::cout << "Done, elapsed time: " << elapsed.count() << " seconds."
             << std::endl;
-
-  // if (result.compare(result)) {
-  //   std::cout << "Buen calculo! :D\n";
-  // } else {
-  //   std::cout << "Mal calculo! :(\n";
-  // }
 
   return 0;
 }
